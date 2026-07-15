@@ -35,6 +35,35 @@ typedef enum sdc_status {
 SDC_API const char *sdc_strerror(sdc_status st);
 SDC_API const char *sdc_version(void);
 
+/* -------------------------------------------------------------- algorithms */
+
+typedef enum sdc_alg {
+    SDC_ALG_NONE = 0,
+    /* AEAD */
+    SDC_ALG_AES_256_GCM,
+    SDC_ALG_CHACHA20_POLY1305,
+    /* Hash */
+    SDC_ALG_SHA256,
+    SDC_ALG_SHA384,
+    SDC_ALG_SHA512,
+    SDC_ALG_SHA3_256,
+    SDC_ALG_SHA3_512,
+    /* KDF */
+    SDC_ALG_HKDF_SHA256,
+    SDC_ALG_HKDF_SHA512,
+    /* Signatures */
+    SDC_ALG_ED25519,
+    SDC_ALG_ECDSA_P256_SHA256,
+    SDC_ALG_ML_DSA_44,
+    SDC_ALG_ML_DSA_65,
+    SDC_ALG_ML_DSA_87,
+    /* KEM */
+    SDC_ALG_ML_KEM_512,
+    SDC_ALG_ML_KEM_768,
+    SDC_ALG_ML_KEM_1024,
+    SDC_ALG__COUNT
+} sdc_alg;
+
 
 #ifdef __cplusplus
 }
