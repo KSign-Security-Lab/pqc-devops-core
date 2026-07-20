@@ -107,6 +107,16 @@ SDC_API size_t      sdc_provider_count(void);
 SDC_API const char *sdc_provider_name(size_t index);
 SDC_API int         sdc_provider_supports(const char *provider, sdc_alg alg);
 
+typedef struct sdc_ctx sdc_ctx;
+
+/* provider_pref: NULL for the default order (overridable with the
+ * SDC_PROVIDER environment variable), or a comma-separated ordered list such
+ * as "nettle,openssl". Only listed providers are used. */
+SDC_API sdc_status  sdc_ctx_new(sdc_ctx **ctx, const char *provider_pref);
+SDC_API void        sdc_ctx_free(sdc_ctx *ctx);
+/* Name of the provider that would serve `alg`, or NULL. */
+SDC_API const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg);
+
 
 #ifdef __cplusplus
 }
