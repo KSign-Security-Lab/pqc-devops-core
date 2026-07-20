@@ -95,6 +95,18 @@ SDC_API sdc_alg     sdc_alg_from_name(const char *name);
 SDC_API const char *sdc_alg_name(sdc_alg alg);
 SDC_API sdc_status  sdc_alg_get_info(sdc_alg alg, sdc_alg_info *info);
 
+/* --------------------------------------------------- providers & contexts */
+
+/* Optional: sdc_ctx_new() initialises the library on first use.
+ * sdc_cleanup() releases backend global state; call once at exit. */
+SDC_API sdc_status sdc_init(void);
+SDC_API void       sdc_cleanup(void);
+
+/* Compiled-in providers, in default preference order. */
+SDC_API size_t      sdc_provider_count(void);
+SDC_API const char *sdc_provider_name(size_t index);
+SDC_API int         sdc_provider_supports(const char *provider, sdc_alg alg);
+
 
 #ifdef __cplusplus
 }
