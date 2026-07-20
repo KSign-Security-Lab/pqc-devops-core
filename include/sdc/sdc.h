@@ -90,6 +90,11 @@ typedef struct sdc_alg_info {
     size_t ss_len;      /* KEM shared secret                */
 } sdc_alg_info;
 
+/* Case-insensitive lookup, e.g. "ML-KEM-768", "aes-256-gcm". */
+SDC_API sdc_alg     sdc_alg_from_name(const char *name);
+SDC_API const char *sdc_alg_name(sdc_alg alg);
+SDC_API sdc_status  sdc_alg_get_info(sdc_alg alg, sdc_alg_info *info);
+
 
 #ifdef __cplusplus
 }
