@@ -64,6 +64,32 @@ typedef enum sdc_alg {
     SDC_ALG__COUNT
 } sdc_alg;
 
+typedef enum sdc_family {
+    SDC_FAMILY_NONE = 0,
+    SDC_FAMILY_AEAD,
+    SDC_FAMILY_HASH,
+    SDC_FAMILY_KDF,
+    SDC_FAMILY_SIG,
+    SDC_FAMILY_KEM
+} sdc_family;
+
+/* Fixed sizes of an algorithm, in bytes (0 = not applicable).
+ * sig_len is the maximum signature size. */
+typedef struct sdc_alg_info {
+    sdc_alg     alg;
+    const char *name;
+    sdc_family  family;
+    size_t key_len;     /* AEAD key                         */
+    size_t nonce_len;   /* AEAD nonce                       */
+    size_t tag_len;     /* AEAD tag                         */
+    size_t digest_len;  /* hash output / KDF underlying hash */
+    size_t pk_len;      /* public key                       */
+    size_t sk_len;      /* secret key                       */
+    size_t sig_len;     /* max signature                    */
+    size_t ct_len;      /* KEM ciphertext                   */
+    size_t ss_len;      /* KEM shared secret                */
+} sdc_alg_info;
+
 
 #ifdef __cplusplus
 }
