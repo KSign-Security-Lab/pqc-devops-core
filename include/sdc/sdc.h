@@ -160,6 +160,18 @@ SDC_API sdc_status sdc_verify(const sdc_ctx *ctx, sdc_alg alg,
                               const uint8_t *msg, size_t msg_len,
                               const uint8_t *sig, size_t sig_len);
 
+SDC_API sdc_status sdc_kem_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                                   uint8_t *pk, size_t *pk_len,
+                                   uint8_t *sk, size_t *sk_len);
+SDC_API sdc_status sdc_kem_encaps(const sdc_ctx *ctx, sdc_alg alg,
+                                  const uint8_t *pk, size_t pk_len,
+                                  uint8_t *ct, size_t *ct_len,
+                                  uint8_t *ss, size_t *ss_len);
+SDC_API sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
+                                  const uint8_t *sk, size_t sk_len,
+                                  const uint8_t *ct, size_t ct_len,
+                                  uint8_t *ss, size_t *ss_len);
+
 
 #ifdef __cplusplus
 }
