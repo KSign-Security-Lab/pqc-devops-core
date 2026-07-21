@@ -147,6 +147,19 @@ SDC_API sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
                             const uint8_t *info, size_t info_len,
                             uint8_t *out, size_t out_len);
 
+SDC_API sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                                   uint8_t *pk, size_t *pk_len,
+                                   uint8_t *sk, size_t *sk_len);
+SDC_API sdc_status sdc_sign(const sdc_ctx *ctx, sdc_alg alg,
+                            const uint8_t *sk, size_t sk_len,
+                            const uint8_t *msg, size_t msg_len,
+                            uint8_t *sig, size_t *sig_len);
+/* Returns SDC_OK if valid, SDC_ERR_VERIFY_FAILED if not. */
+SDC_API sdc_status sdc_verify(const sdc_ctx *ctx, sdc_alg alg,
+                              const uint8_t *pk, size_t pk_len,
+                              const uint8_t *msg, size_t msg_len,
+                              const uint8_t *sig, size_t sig_len);
+
 
 #ifdef __cplusplus
 }
