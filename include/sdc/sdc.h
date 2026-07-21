@@ -117,6 +117,25 @@ SDC_API void        sdc_ctx_free(sdc_ctx *ctx);
 /* Name of the provider that would serve `alg`, or NULL. */
 SDC_API const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg);
 
+/* -------------------------------------------------------------- operations */
+
+SDC_API sdc_status sdc_random(const sdc_ctx *ctx, uint8_t *buf, size_t len);
+
+/* AEAD. out = ciphertext||tag, needs pt_len + tag_len bytes. */
+SDC_API sdc_status sdc_aead_encrypt(const sdc_ctx *ctx, sdc_alg alg,
+                                    const uint8_t *key, size_t key_len,
+                                    const uint8_t *nonce, size_t nonce_len,
+                                    const uint8_t *aad, size_t aad_len,
+                                    const uint8_t *pt, size_t pt_len,
+                                    uint8_t *out, size_t *out_len);
+/* in = ciphertext||tag. On failure the output buffer is zeroed. */
+SDC_API sdc_status sdc_aead_decrypt(const sdc_ctx *ctx, sdc_alg alg,
+                                    const uint8_t *key, size_t key_len,
+                                    const uint8_t *nonce, size_t nonce_len,
+                                    const uint8_t *aad, size_t aad_len,
+                                    const uint8_t *in, size_t in_len,
+                                    uint8_t *pt, size_t *pt_len);
+
 
 #ifdef __cplusplus
 }
