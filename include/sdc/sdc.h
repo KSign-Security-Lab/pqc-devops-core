@@ -136,6 +136,17 @@ SDC_API sdc_status sdc_aead_decrypt(const sdc_ctx *ctx, sdc_alg alg,
                                     const uint8_t *in, size_t in_len,
                                     uint8_t *pt, size_t *pt_len);
 
+SDC_API sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
+                            const uint8_t *in, size_t in_len,
+                            uint8_t *out, size_t *out_len);
+
+/* HKDF (RFC 5869) extract+expand. out_len <= 255 * digest_len. */
+SDC_API sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
+                            const uint8_t *ikm, size_t ikm_len,
+                            const uint8_t *salt, size_t salt_len,
+                            const uint8_t *info, size_t info_len,
+                            uint8_t *out, size_t out_len);
+
 
 #ifdef __cplusplus
 }
