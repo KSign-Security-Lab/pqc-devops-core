@@ -172,6 +172,8 @@ SDC_API sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
                                   const uint8_t *ct, size_t ct_len,
                                   uint8_t *ss, size_t *ss_len);
 
+/* Zero memory in a way the compiler will not optimise away. */
+SDC_API void sdc_memzero(void *p, size_t len);
 
 #ifdef __cplusplus
 }
