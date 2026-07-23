@@ -65,4 +65,26 @@ typedef struct sdc_provider {
                              const uint8_t *ct, uint8_t *ss);
 } sdc_provider;
 
+/* Registry (src/core/registry.c) */
+size_t              sdc__provider_count(void);
+const sdc_provider *sdc__provider_at(size_t i);
+const sdc_provider *sdc__provider_by_name(const char *name, size_t len);
+
+/* Algorithm table (src/core/alg_table.c) */
+const sdc_alg_info *sdc__alg_info(sdc_alg alg);
+
+/* Compiled-in providers */
+#ifdef SDC_HAVE_OPENSSL
+extern const sdc_provider sdc_provider_openssl;
+#endif
+#ifdef SDC_HAVE_NETTLE
+extern const sdc_provider sdc_provider_nettle;
+#endif
+#ifdef SDC_HAVE_GCRYPT
+extern const sdc_provider sdc_provider_gcrypt;
+#endif
+#ifdef SDC_HAVE_LIBOQS
+extern const sdc_provider sdc_provider_liboqs;
+#endif
+
 #endif /* SDC_INTERNAL_PROVIDER_H */
