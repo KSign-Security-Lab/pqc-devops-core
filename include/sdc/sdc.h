@@ -1,5 +1,29 @@
-/* SDC Crypto-Agility SDK public API.
- * SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SDC Crypto-Agility SDK — single, algorithm-neutral C API over multiple
+ * cryptographic libraries (OpenSSL, libgcrypt, Nettle, liboqs).
+ *
+ * Applications call the functions below; which library actually performs the
+ * operation is decided by the provider registry (compile-time availability +
+ * runtime preference), so the backend can be swapped without touching code.
+ *
+ * Conventions
+ *  - Every function returns sdc_status; SDC_OK (0) is success.
+ *  - Output buffers are passed with an in/out length (`size_t *out_len`):
+ *    on input the buffer capacity, on output the bytes written. If the buffer
+ *    is too small, SDC_ERR_BUFFER_TOO_SMALL is returned and *out_len is set to
+ *    the required size. Use sdc_alg_get_info() to size buffers up front.
+ *  - A NULL `sdc_ctx *` uses the default provider order.
+ *
+ * Canonical (provider-independent) encodings
+ *  - AEAD output:   ciphertext || tag
+ *  - Ed25519:       pk = 32-byte public key, sk = 32-byte seed, sig = 64 bytes
+ *  - ECDSA-P256:    pk = 65-byte uncompressed point (0x04||X||Y),
+ *                   sk = 32-byte big-endian scalar, sig = r||s (64 bytes);
+ *                   the message is hashed with SHA-256 internally
+ *  - ML-KEM/ML-DSA: FIPS 203 / FIPS 204 byte encodings
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef SDC_SDC_H
 #define SDC_SDC_H
 
