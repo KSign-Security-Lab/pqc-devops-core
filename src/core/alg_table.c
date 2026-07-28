@@ -29,3 +29,27 @@ static const sdc_alg_info g_algs[SDC_ALG__COUNT] = {
 };
 #undef A
 
+const sdc_alg_info *sdc__alg_info(sdc_alg alg)
+{
+    if ((int)alg <= SDC_ALG_NONE || alg >= SDC_ALG__COUNT)
+        return NULL;
+    return &g_algs[alg];
+}
+
+sdc_status sdc_alg_get_info(sdc_alg alg, sdc_alg_info *info)
+{
+    const sdc_alg_info *ai = sdc__alg_info(alg);
+    if (!ai)
+        return SDC_ERR_UNSUPPORTED;
+    if (!info)
+        return SDC_ERR_INVALID_ARG;
+    *info = *ai;
+    return SDC_OK;
+}
+
+const char *sdc_alg_name(sdc_alg alg)
+{
+    const sdc_alg_info *ai = sdc__alg_info(alg);
+    return ai ? ai->name : NULL;
+}
+
