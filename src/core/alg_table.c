@@ -53,3 +53,20 @@ const char *sdc_alg_name(sdc_alg alg)
     return ai ? ai->name : NULL;
 }
 
+static int ieq(const char *a, const char *b)
+{
+    for (; *a && *b; a++, b++)
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b))
+            return 0;
+    return *a == *b;
+}
+
+sdc_alg sdc_alg_from_name(const char *name)
+{
+    if (!name)
+        return SDC_ALG_NONE;
+    for (int i = SDC_ALG_NONE + 1; i < SDC_ALG__COUNT; i++)
+        if (ieq(name, g_algs[i].name))
+            return (sdc_alg)i;
+    return SDC_ALG_NONE;
+}
