@@ -86,3 +86,18 @@ const sdc_provider *sdc__provider_by_name(const char *name, size_t len)
     return NULL;
 }
 
+size_t sdc_provider_count(void) { return sdc__provider_count(); }
+
+const char *sdc_provider_name(size_t index)
+{
+    const sdc_provider *p = sdc__provider_at(index);
+    return p ? p->name : NULL;
+}
+
+int sdc_provider_supports(const char *provider, sdc_alg alg)
+{
+    if (!provider || !sdc__alg_info(alg))
+        return 0;
+    const sdc_provider *p = sdc__provider_by_name(provider, strlen(provider));
+    return p && p->supports(alg);
+}
