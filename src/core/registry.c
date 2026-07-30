@@ -63,3 +63,26 @@ void sdc_cleanup(void)
     pthread_mutex_unlock(&g_lock);
 }
 
+size_t sdc__provider_count(void)
+{
+    sdc_init();
+    return g_active_n;
+}
+
+const sdc_provider *sdc__provider_at(size_t i)
+{
+    sdc_init();
+    return i < g_active_n ? g_active[i] : NULL;
+}
+
+const sdc_provider *sdc__provider_by_name(const char *name, size_t len)
+{
+    sdc_init();
+    for (size_t i = 0; i < g_active_n; i++) {
+        const char *pn = g_active[i]->name;
+        if (strlen(pn) == len && strncmp(pn, name, len) == 0)
+            return g_active[i];
+    }
+    return NULL;
+}
+
