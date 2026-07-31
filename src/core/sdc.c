@@ -105,3 +105,29 @@ sdc_status sdc_ctx_new(sdc_ctx **out, const char *pref)
 
 void sdc_ctx_free(sdc_ctx *ctx) { free(ctx); }
 
+static const sdc_ctx *resolve_ctx(const sdc_ctx *ctx, sdc_ctx *tmp)
+{
+    if (ctx)
+        return ctx;
+    default_order(tmp);
+    return tmp;
+}
+
+static const sdc_provider *pick(const sdc_ctx *ctx, sdc_alg alg)
+{
+    sdc_ctx tmp;
+    ctx = resolve_ctx(ctx, &tmp);
+    for (size_t i = 0; i < ctx->n; i++)
+        if (ctx->order[i]->supports(alg))
+            return ctx->order[i];
+    return NULL;
+}
+
+const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
+{
+    if (!sdc__alg_info(alg))
+        return NULL;
+    const sdc_provider *p = pick(ctx, alg);
+    return p ? p->name : NULL;
+}
+
