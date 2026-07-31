@@ -85,6 +85,11 @@ sdc_status sdc_ctx_new(sdc_ctx **out, const char *pref)
     if (!c)
         return SDC_ERR_NOMEM;
 
+    if (!pref) {
+        const char *env = getenv("SDC_PROVIDER");
+        if (env && *env)
+            pref = env;
+    }
     if (pref) {
         sdc_status st = parse_pref(c, pref);
         if (st != SDC_OK) {
