@@ -38,3 +38,65 @@ void sdc_memzero(void *p, size_t len)
         *v++ = 0;
 }
 
+/* ----------------------------------------------------------------- contexts */
+
+static sdc_status parse_pref(sdc_ctx *c, const char *pref)
+{
+    const char *s = pref;
+    while (*s) {
+        while (*s == ',' || *s == ' ')
+            s++;
+        const char *e = s;
+        while (*e && *e != ',' && *e != ' ')
+            e++;
+        if (e > s) {
+            const sdc_provider *p = sdc__provider_by_name(s, (size_t)(e - s));
+            if (!p)
+                return SDC_ERR_NO_PROVIDER;
+            int dup = 0;
+            for (size_t i = 0; i < c->n; i++)
+                dup |= c->order[i] == p;
+            if (!dup) {
+                if (c->n == SDC_MAX_PROVIDERS)
+                    return SDC_ERR_INVALID_ARG;
+                c->order[c->n++] = p;
+            }
+        }
+        s = e;
+    }
+    return c->n ? SDC_OK : SDC_ERR_INVALID_ARG;
+}
+
+static void default_order(sdc_ctx *c)
+{
+    c->n = 0;
+    for (size_t i = 0; i < sdc__provider_count() && c->n < SDC_MAX_PROVIDERS; i++)
+        c->order[c->n++] = sdc__provider_at(i);
+}
+
+sdc_status sdc_ctx_new(sdc_ctx **out, const char *pref)
+{
+    if (!out)
+        return SDC_ERR_INVALID_ARG;
+    *out = NULL;
+    sdc_init();
+
+    sdc_ctx *c = calloc(1, sizeof(*c));
+    if (!c)
+        return SDC_ERR_NOMEM;
+
+    if (pref) {
+        sdc_status st = parse_pref(c, pref);
+        if (st != SDC_OK) {
+            free(c);
+            return st;
+        }
+    } else {
+        default_order(c);
+    }
+    *out = c;
+    return SDC_OK;
+}
+
+void sdc_ctx_free(sdc_ctx *ctx) { free(ctx); }
+
