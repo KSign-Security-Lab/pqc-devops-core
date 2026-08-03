@@ -131,3 +131,32 @@ const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
     return p ? p->name : NULL;
 }
 
+/* --------------------------------------------------------------- validation */
+
+/* Resolve alg info + provider for an operation of the given family. */
+static sdc_status prepare(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
+                          const sdc_alg_info **ai, const sdc_provider **p)
+{
+    *ai = sdc__alg_info(alg);
+    if (!*ai)
+        return SDC_ERR_UNSUPPORTED;
+    if ((*ai)->family != fam)
+        return SDC_ERR_INVALID_ARG;
+    *p = pick(ctx, alg);
+    return *p ? SDC_OK : SDC_ERR_NO_PROVIDER;
+}
+
+/* Variable-length input: NULL only allowed when empty. */
+#define CHECK_IN(ptr, len) \
+    do { if (!(ptr) && (len)) return SDC_ERR_INVALID_ARG; } while (0)
+/* Fixed-length input. */
+#define CHECK_FIXED(ptr, len, want) \
+    do { if (!(ptr) || (len) != (want)) return SDC_ERR_INVALID_ARG; } while (0)
+/* In/out output buffer with a required size. */
+#define CHECK_OUT(ptr, lenp, need)                                   \
+    do {                                                             \
+        if (!(lenp)) return SDC_ERR_INVALID_ARG;                     \
+        if (*(lenp) < (need)) { *(lenp) = (need); return SDC_ERR_BUFFER_TOO_SMALL; } \
+        if (!(ptr) && (need)) return SDC_ERR_INVALID_ARG;            \
+    } while (0)
+
