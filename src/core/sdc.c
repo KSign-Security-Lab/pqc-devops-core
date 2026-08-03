@@ -160,3 +160,18 @@ static sdc_status prepare(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
         if (!(ptr) && (need)) return SDC_ERR_INVALID_ARG;            \
     } while (0)
 
+/* --------------------------------------------------------------- operations */
+
+sdc_status sdc_random(const sdc_ctx *ctx, uint8_t *buf, size_t len)
+{
+    CHECK_IN(buf, len);
+    if (!len)
+        return SDC_OK;
+    sdc_ctx tmp;
+    ctx = resolve_ctx(ctx, &tmp);
+    for (size_t i = 0; i < ctx->n; i++)
+        if (ctx->order[i]->random)
+            return ctx->order[i]->random(buf, len);
+    return SDC_ERR_NO_PROVIDER;
+}
+
