@@ -204,3 +204,32 @@ sdc_status sdc_aead_encrypt(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+sdc_status sdc_aead_decrypt(const sdc_ctx *ctx, sdc_alg alg,
+                            const uint8_t *key, size_t key_len,
+                            const uint8_t *nonce, size_t nonce_len,
+                            const uint8_t *aad, size_t aad_len,
+                            const uint8_t *in, size_t in_len,
+                            uint8_t *pt, size_t *pt_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_AEAD, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(key, key_len, ai->key_len);
+    CHECK_FIXED(nonce, nonce_len, ai->nonce_len);
+    CHECK_IN(aad, aad_len);
+    if (!in || in_len < ai->tag_len)
+        return SDC_ERR_INVALID_ARG;
+    size_t ct_len = in_len - ai->tag_len;
+    CHECK_OUT(pt, pt_len, ct_len);
+
+    st = p->aead_decrypt(alg, key, nonce, aad, aad_len, in, ct_len,
+                         in + ct_len, pt);
+    if (st == SDC_OK)
+        *pt_len = ct_len;
+    else if (ct_len)
+        sdc_memzero(pt, ct_len);
+    return st;
+}
+
