@@ -233,3 +233,20 @@ sdc_status sdc_aead_decrypt(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
+                    const uint8_t *in, size_t in_len,
+                    uint8_t *out, size_t *out_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_HASH, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_IN(in, in_len);
+    CHECK_OUT(out, out_len, ai->digest_len);
+    st = p->hash(alg, in, in_len, out);
+    if (st == SDC_OK)
+        *out_len = ai->digest_len;
+    return st;
+}
+
