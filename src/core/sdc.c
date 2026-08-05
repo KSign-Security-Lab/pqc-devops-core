@@ -250,3 +250,25 @@ sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
+                    const uint8_t *ikm, size_t ikm_len,
+                    const uint8_t *salt, size_t salt_len,
+                    const uint8_t *info, size_t info_len,
+                    uint8_t *out, size_t out_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KDF, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_IN(ikm, ikm_len);
+    CHECK_IN(salt, salt_len);
+    CHECK_IN(info, info_len);
+    if (!out || out_len == 0 || out_len > 255 * ai->digest_len)
+        return SDC_ERR_INVALID_ARG;
+    st = p->hkdf(alg, ikm, ikm_len, salt, salt_len, info, info_len, out, out_len);
+    if (st != SDC_OK)
+        sdc_memzero(out, out_len);
+    return st;
+}
+
