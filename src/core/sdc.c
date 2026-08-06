@@ -272,3 +272,78 @@ sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
+                          uint8_t *pk, size_t *pk_len,
+                          uint8_t *sk, size_t *sk_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, fam, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    if (!pk_len || !sk_len)
+        return SDC_ERR_INVALID_ARG;
+    if (*pk_len < ai->pk_len || *sk_len < ai->sk_len) {
+        *pk_len = ai->pk_len;
+        *sk_len = ai->sk_len;
+        return SDC_ERR_BUFFER_TOO_SMALL;
+    }
+    if (!pk || !sk)
+        return SDC_ERR_INVALID_ARG;
+    st = fam == SDC_FAMILY_SIG ? p->sig_keypair(alg, pk, sk)
+                               : p->kem_keypair(alg, pk, sk);
+    if (st == SDC_OK) {
+        *pk_len = ai->pk_len;
+        *sk_len = ai->sk_len;
+    } else {
+        sdc_memzero(sk, ai->sk_len);
+    }
+    return st;
+}
+
+sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                           uint8_t *pk, size_t *pk_len,
+                           uint8_t *sk, size_t *sk_len)
+{
+    return keypair(ctx, alg, SDC_FAMILY_SIG, pk, pk_len, sk, sk_len);
+}
+
+sdc_status sdc_sign(const sdc_ctx *ctx, sdc_alg alg,
+                    const uint8_t *sk, size_t sk_len,
+                    const uint8_t *msg, size_t msg_len,
+                    uint8_t *sig, size_t *sig_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(sk, sk_len, ai->sk_len);
+    CHECK_IN(msg, msg_len);
+    CHECK_OUT(sig, sig_len, ai->sig_len);
+    size_t n = ai->sig_len;
+    st = p->sign(alg, sk, msg, msg_len, sig, &n);
+    if (st == SDC_OK)
+        *sig_len = n;
+    return st;
+}
+
+sdc_status sdc_verify(const sdc_ctx *ctx, sdc_alg alg,
+                      const uint8_t *pk, size_t pk_len,
+                      const uint8_t *msg, size_t msg_len,
+                      const uint8_t *sig, size_t sig_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(pk, pk_len, ai->pk_len);
+    CHECK_IN(msg, msg_len);
+    if (!sig)
+        return SDC_ERR_INVALID_ARG;
+    if (sig_len == 0 || sig_len > ai->sig_len)
+        return SDC_ERR_VERIFY_FAILED;
+    return p->verify(alg, pk, msg, msg_len, sig, sig_len);
+}
+
