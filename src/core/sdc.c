@@ -347,3 +347,60 @@ sdc_status sdc_verify(const sdc_ctx *ctx, sdc_alg alg,
     return p->verify(alg, pk, msg, msg_len, sig, sig_len);
 }
 
+sdc_status sdc_kem_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                           uint8_t *pk, size_t *pk_len,
+                           uint8_t *sk, size_t *sk_len)
+{
+    return keypair(ctx, alg, SDC_FAMILY_KEM, pk, pk_len, sk, sk_len);
+}
+
+sdc_status sdc_kem_encaps(const sdc_ctx *ctx, sdc_alg alg,
+                          const uint8_t *pk, size_t pk_len,
+                          uint8_t *ct, size_t *ct_len,
+                          uint8_t *ss, size_t *ss_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(pk, pk_len, ai->pk_len);
+    if (!ct_len || !ss_len)
+        return SDC_ERR_INVALID_ARG;
+    if (*ct_len < ai->ct_len || *ss_len < ai->ss_len) {
+        *ct_len = ai->ct_len;
+        *ss_len = ai->ss_len;
+        return SDC_ERR_BUFFER_TOO_SMALL;
+    }
+    if (!ct || !ss)
+        return SDC_ERR_INVALID_ARG;
+    st = p->kem_encaps(alg, pk, ct, ss);
+    if (st == SDC_OK) {
+        *ct_len = ai->ct_len;
+        *ss_len = ai->ss_len;
+    } else {
+        sdc_memzero(ss, ai->ss_len);
+    }
+    return st;
+}
+
+sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
+                          const uint8_t *sk, size_t sk_len,
+                          const uint8_t *ct, size_t ct_len,
+                          uint8_t *ss, size_t *ss_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(sk, sk_len, ai->sk_len);
+    CHECK_FIXED(ct, ct_len, ai->ct_len);
+    CHECK_OUT(ss, ss_len, ai->ss_len);
+    st = p->kem_decaps(alg, sk, ct, ss);
+    if (st == SDC_OK)
+        *ss_len = ai->ss_len;
+    else
+        sdc_memzero(ss, ai->ss_len);
+    return st;
+}
