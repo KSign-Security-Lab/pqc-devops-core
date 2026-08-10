@@ -12,6 +12,8 @@ endif()
 include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 
+option(SDC_WERROR        "Treat warnings as errors"               OFF)
+
 add_library(sdc_objs OBJECT
   src/core/sdc.c
   src/core/registry.c
@@ -21,6 +23,12 @@ target_include_directories(sdc_objs
   PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(sdc_objs PRIVATE _DEFAULT_SOURCE)
 set_target_properties(sdc_objs PROPERTIES C_VISIBILITY_PRESET hidden)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(sdc_objs PRIVATE -Wall -Wextra -Wshadow -Wstrict-prototypes)
+  if(SDC_WERROR)
+    target_compile_options(sdc_objs PRIVATE -Werror)
+  endif()
+endif()
 
 set(SDC_LINK_LIBS Threads::Threads)
 set(SDC_PC_REQUIRES "")
