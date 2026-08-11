@@ -43,8 +43,80 @@ static sdc_status ossl_random(uint8_t *buf, size_t len)
     return SDC_OK;
 }
 
+/* ------------------------------------------------------------------- AEAD */
+
+static const EVP_CIPHER *aead_cipher(sdc_alg alg)
+{
+    return alg == SDC_ALG_AES_256_GCM ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
+}
+
+/* EVP takes int lengths; process in chunks so size_t inputs are safe. */
+static int update_chunks(EVP_CIPHER_CTX *c, int enc, uint8_t *out,
+                         const uint8_t *in, size_t len)
+{
+    while (len) {
+        int n = len > (INT_MAX / 2) ? (INT_MAX / 2) : (int)len, outl;
+        int ok = enc ? EVP_EncryptUpdate(c, out, &outl, in, n)
+                     : EVP_DecryptUpdate(c, out, &outl, in, n);
+        if (!ok)
+            return 0;
+        if (out)
+            out += outl;
+        in += n;
+        len -= (size_t)n;
+    }
+    return 1;
+}
+
+static sdc_status ossl_aead_encrypt(sdc_alg alg, const uint8_t *key,
+                                    const uint8_t *nonce,
+                                    const uint8_t *aad, size_t aad_len,
+                                    const uint8_t *pt, size_t pt_len,
+                                    uint8_t *ct, uint8_t *tag)
+{
+    sdc_status st = SDC_ERR_PROVIDER;
+    int outl;
+    EVP_CIPHER_CTX *c = EVP_CIPHER_CTX_new();
+    if (!c)
+        return SDC_ERR_NOMEM;
+    if (EVP_EncryptInit_ex(c, aead_cipher(alg), NULL, key, nonce) == 1 &&
+        update_chunks(c, 1, NULL, aad, aad_len) &&
+        update_chunks(c, 1, ct, pt, pt_len) &&
+        EVP_EncryptFinal_ex(c, ct + pt_len, &outl) == 1 &&
+        EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_AEAD_GET_TAG, 16, tag) == 1)
+        st = SDC_OK;
+    EVP_CIPHER_CTX_free(c);
+    return st;
+}
+
+static sdc_status ossl_aead_decrypt(sdc_alg alg, const uint8_t *key,
+                                    const uint8_t *nonce,
+                                    const uint8_t *aad, size_t aad_len,
+                                    const uint8_t *ct, size_t ct_len,
+                                    const uint8_t *tag, uint8_t *pt)
+{
+    sdc_status st = SDC_ERR_PROVIDER;
+    int outl;
+    uint8_t tagbuf[16];
+    memcpy(tagbuf, tag, sizeof(tagbuf));
+    EVP_CIPHER_CTX *c = EVP_CIPHER_CTX_new();
+    if (!c)
+        return SDC_ERR_NOMEM;
+    if (EVP_DecryptInit_ex(c, aead_cipher(alg), NULL, key, nonce) == 1 &&
+        EVP_CIPHER_CTX_ctrl(c, EVP_CTRL_AEAD_SET_TAG, 16, tagbuf) == 1 &&
+        update_chunks(c, 0, NULL, aad, aad_len) &&
+        update_chunks(c, 0, pt, ct, ct_len)) {
+        st = EVP_DecryptFinal_ex(c, pt + ct_len, &outl) == 1 ? SDC_OK
+                                                             : SDC_ERR_AUTH_FAILED;
+    }
+    EVP_CIPHER_CTX_free(c);
+    return st;
+}
+
 const sdc_provider sdc_provider_openssl = {
-    .name     = "openssl",
-    .supports = ossl_supports,
-    .random   = ossl_random,
+    .name         = "openssl",
+    .supports     = ossl_supports,
+    .random       = ossl_random,
+    .aead_encrypt = ossl_aead_encrypt,
+    .aead_decrypt = ossl_aead_decrypt,
 };
