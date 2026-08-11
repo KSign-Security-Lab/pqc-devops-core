@@ -13,6 +13,7 @@ include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 
 option(SDC_WERROR        "Treat warnings as errors"               OFF)
+option(SDC_SANITIZE      "Build with ASan + UBSan"                OFF)
 
 add_library(sdc_objs OBJECT
   src/core/sdc.c
@@ -28,6 +29,10 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
   if(SDC_WERROR)
     target_compile_options(sdc_objs PRIVATE -Werror)
   endif()
+endif()
+if(SDC_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
 endif()
 
 set(SDC_LINK_LIBS Threads::Threads)
