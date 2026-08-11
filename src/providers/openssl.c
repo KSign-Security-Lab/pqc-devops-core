@@ -113,10 +113,36 @@ static sdc_status ossl_aead_decrypt(sdc_alg alg, const uint8_t *key,
     return st;
 }
 
+/* ------------------------------------------------------------- hash / KDF */
+
+static const EVP_MD *md_for(sdc_alg alg)
+{
+    switch (alg) {
+    case SDC_ALG_SHA256:
+    case SDC_ALG_HKDF_SHA256:
+    case SDC_ALG_ECDSA_P256_SHA256: return EVP_sha256();
+    case SDC_ALG_SHA384:            return EVP_sha384();
+    case SDC_ALG_SHA512:
+    case SDC_ALG_HKDF_SHA512:       return EVP_sha512();
+    case SDC_ALG_SHA3_256:          return EVP_sha3_256();
+    case SDC_ALG_SHA3_512:          return EVP_sha3_512();
+    default:                        return NULL;
+    }
+}
+
+static sdc_status ossl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
+                            uint8_t *out)
+{
+    static const uint8_t empty[1];
+    return EVP_Digest(in ? in : empty, in_len, out, NULL, md_for(alg), NULL) == 1
+               ? SDC_OK : SDC_ERR_PROVIDER;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
     .random       = ossl_random,
     .aead_encrypt = ossl_aead_encrypt,
     .aead_decrypt = ossl_aead_decrypt,
+    .hash         = ossl_hash,
 };
