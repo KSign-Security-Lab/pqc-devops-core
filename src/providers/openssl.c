@@ -138,6 +138,37 @@ static sdc_status ossl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
                ? SDC_OK : SDC_ERR_PROVIDER;
 }
 
+static sdc_status ossl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
+                            const uint8_t *salt, size_t salt_len,
+                            const uint8_t *info, size_t info_len,
+                            uint8_t *out, size_t out_len)
+{
+    static uint8_t empty[1];
+    sdc_status st = SDC_ERR_PROVIDER;
+    EVP_KDF *kdf = EVP_KDF_fetch(NULL, "HKDF", NULL);
+    EVP_KDF_CTX *kc = kdf ? EVP_KDF_CTX_new(kdf) : NULL;
+    if (kc) {
+        OSSL_PARAM params[5], *p = params;
+        *p++ = OSSL_PARAM_construct_utf8_string(
+            OSSL_KDF_PARAM_DIGEST,
+            (char *)(alg == SDC_ALG_HKDF_SHA256 ? "SHA256" : "SHA512"), 0);
+        *p++ = OSSL_PARAM_construct_octet_string(
+            OSSL_KDF_PARAM_KEY, ikm ? (void *)ikm : empty, ikm_len);
+        if (salt_len)
+            *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT,
+                                                     (void *)salt, salt_len);
+        if (info_len)
+            *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO,
+                                                     (void *)info, info_len);
+        *p = OSSL_PARAM_construct_end();
+        if (EVP_KDF_derive(kc, out, out_len, params) == 1)
+            st = SDC_OK;
+    }
+    EVP_KDF_CTX_free(kc);
+    EVP_KDF_free(kdf);
+    return st;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
@@ -145,4 +176,5 @@ const sdc_provider sdc_provider_openssl = {
     .aead_encrypt = ossl_aead_encrypt,
     .aead_decrypt = ossl_aead_decrypt,
     .hash         = ossl_hash,
+    .hkdf         = ossl_hkdf,
 };
