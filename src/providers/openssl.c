@@ -169,6 +169,61 @@ static sdc_status ossl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
     return st;
 }
 
+/* ------------------------------------------------------------- signatures */
+
+/* Build an EC P-256 EVP_PKEY from raw public point and optional scalar. */
+static EVP_PKEY *ec_from_raw(const uint8_t *pub, size_t pub_len,
+                             const uint8_t *priv)
+{
+    EVP_PKEY *pkey = NULL;
+    BIGNUM *d = NULL;
+    OSSL_PARAM_BLD *bld = OSSL_PARAM_BLD_new();
+    OSSL_PARAM *params = NULL;
+    EVP_PKEY_CTX *pc = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+    if (!bld || !pc)
+        goto out;
+    if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_PKEY_PARAM_GROUP_NAME,
+                                         "prime256v1", 0) ||
+        !OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PUB_KEY,
+                                          pub, pub_len))
+        goto out;
+    if (priv) {
+        d = BN_secure_new();
+        if (!d || !BN_bin2bn(priv, 32, d) ||
+            !OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_PRIV_KEY, d))
+            goto out;
+    }
+    params = OSSL_PARAM_BLD_to_param(bld);
+    if (!params || EVP_PKEY_fromdata_init(pc) != 1 ||
+        EVP_PKEY_fromdata(pc, &pkey, priv ? EVP_PKEY_KEYPAIR : EVP_PKEY_PUBLIC_KEY,
+                          params) != 1)
+        pkey = NULL;
+out:
+    OSSL_PARAM_free(params);
+    OSSL_PARAM_BLD_free(bld);
+    BN_clear_free(d);
+    EVP_PKEY_CTX_free(pc);
+    return pkey;
+}
+
+/* Derive the uncompressed public point from a P-256 scalar. */
+static int ec_pub_from_priv(const uint8_t *priv, uint8_t pub[65])
+{
+    int ok = 0;
+    EC_GROUP *g = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+    EC_POINT *pt = g ? EC_POINT_new(g) : NULL;
+    BIGNUM *d = BN_secure_new();
+    if (g && pt && d && BN_bin2bn(priv, 32, d) && !BN_is_zero(d) &&
+        BN_cmp(d, EC_GROUP_get0_order(g)) < 0 &&
+        EC_POINT_mul(g, pt, d, NULL, NULL, NULL) == 1 &&
+        EC_POINT_point2oct(g, pt, POINT_CONVERSION_UNCOMPRESSED, pub, 65, NULL) == 65)
+        ok = 1;
+    BN_clear_free(d);
+    EC_POINT_free(pt);
+    EC_GROUP_free(g);
+    return ok;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
