@@ -224,6 +224,31 @@ static int ec_pub_from_priv(const uint8_t *priv, uint8_t pub[65])
     return ok;
 }
 
+static sdc_status ossl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    sdc_status st = SDC_ERR_PROVIDER;
+    EVP_PKEY *pkey = NULL;
+    if (alg == SDC_ALG_ED25519) {
+        size_t pl = 32, sl = 32;
+        pkey = EVP_PKEY_Q_keygen(NULL, NULL, "ED25519");
+        if (pkey && EVP_PKEY_get_raw_public_key(pkey, pk, &pl) == 1 &&
+            EVP_PKEY_get_raw_private_key(pkey, sk, &sl) == 1 && pl == 32 && sl == 32)
+            st = SDC_OK;
+    } else {
+        BIGNUM *d = NULL;
+        size_t pl = 0;
+        pkey = EVP_PKEY_Q_keygen(NULL, NULL, "EC", "P-256");
+        if (pkey && EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, &d) == 1 &&
+            BN_bn2binpad(d, sk, 32) == 32 &&
+            EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY,
+                                            pk, 65, &pl) == 1 && pl == 65)
+            st = SDC_OK;
+        BN_clear_free(d);
+    }
+    EVP_PKEY_free(pkey);
+    return st;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
@@ -232,4 +257,5 @@ const sdc_provider sdc_provider_openssl = {
     .aead_decrypt = ossl_aead_decrypt,
     .hash         = ossl_hash,
     .hkdf         = ossl_hkdf,
+    .sig_keypair  = ossl_sig_keypair,
 };
