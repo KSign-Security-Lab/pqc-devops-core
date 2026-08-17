@@ -249,6 +249,56 @@ static sdc_status ossl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
     return st;
 }
 
+static sdc_status digest_sign(EVP_PKEY *pkey, const EVP_MD *md,
+                              const uint8_t *msg, size_t msg_len,
+                              uint8_t *sig, size_t *sig_len)
+{
+    static const uint8_t empty[1];
+    sdc_status st = SDC_ERR_PROVIDER;
+    EVP_MD_CTX *mc = EVP_MD_CTX_new();
+    if (mc && EVP_DigestSignInit(mc, NULL, md, NULL, pkey) == 1 &&
+        EVP_DigestSign(mc, sig, sig_len, msg ? msg : empty, msg_len) == 1)
+        st = SDC_OK;
+    EVP_MD_CTX_free(mc);
+    return st;
+}
+
+static sdc_status ossl_sign(sdc_alg alg, const uint8_t *sk,
+                            const uint8_t *msg, size_t msg_len,
+                            uint8_t *sig, size_t *sig_len)
+{
+    sdc_status st = SDC_ERR_PROVIDER;
+    if (alg == SDC_ALG_ED25519) {
+        EVP_PKEY *pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, sk, 32);
+        if (pkey)
+            st = digest_sign(pkey, NULL, msg, msg_len, sig, sig_len);
+        EVP_PKEY_free(pkey);
+        return st;
+    }
+
+    /* ECDSA: DER signature -> fixed r||s. */
+    uint8_t pub[65], der[80];
+    size_t der_len = sizeof(der);
+    if (!ec_pub_from_priv(sk, pub))
+        return SDC_ERR_INVALID_ARG;
+    EVP_PKEY *pkey = ec_from_raw(pub, sizeof(pub), sk);
+    if (pkey && digest_sign(pkey, EVP_sha256(), msg, msg_len, der, &der_len) == SDC_OK) {
+        const uint8_t *q = der;
+        ECDSA_SIG *es = d2i_ECDSA_SIG(NULL, &q, (long)der_len);
+        const BIGNUM *r, *s;
+        if (es) {
+            ECDSA_SIG_get0(es, &r, &s);
+            if (BN_bn2binpad(r, sig, 32) == 32 && BN_bn2binpad(s, sig + 32, 32) == 32) {
+                *sig_len = 64;
+                st = SDC_OK;
+            }
+            ECDSA_SIG_free(es);
+        }
+    }
+    EVP_PKEY_free(pkey);
+    return st;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
@@ -258,4 +308,5 @@ const sdc_provider sdc_provider_openssl = {
     .hash         = ossl_hash,
     .hkdf         = ossl_hkdf,
     .sig_keypair  = ossl_sig_keypair,
+    .sign         = ossl_sign,
 };
