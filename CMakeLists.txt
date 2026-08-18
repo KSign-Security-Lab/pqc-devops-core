@@ -12,6 +12,7 @@ endif()
 include(GNUInstallDirs)
 find_package(Threads REQUIRED)
 
+option(SDC_WITH_OPENSSL  "Build the OpenSSL 3 provider"           ON)
 option(SDC_WERROR        "Treat warnings as errors"               OFF)
 option(SDC_SANITIZE      "Build with ASan + UBSan"                OFF)
 
@@ -38,6 +39,17 @@ endif()
 set(SDC_LINK_LIBS Threads::Threads)
 set(SDC_PC_REQUIRES "")
 set(SDC_PROVIDERS "")
+
+# --- OpenSSL -----------------------------------------------------------------
+if(SDC_WITH_OPENSSL)
+  find_package(OpenSSL 3.0 REQUIRED COMPONENTS Crypto)
+  target_sources(sdc_objs PRIVATE src/providers/openssl.c)
+  target_compile_definitions(sdc_objs PRIVATE SDC_HAVE_OPENSSL OPENSSL_API_COMPAT=30000 OPENSSL_NO_DEPRECATED)
+  target_link_libraries(sdc_objs PRIVATE OpenSSL::Crypto)
+  list(APPEND SDC_LINK_LIBS OpenSSL::Crypto)
+  string(APPEND SDC_PC_REQUIRES " libcrypto")
+  list(APPEND SDC_PROVIDERS openssl)
+endif()
 
 # --- libraries -----------------------------------------------------------------
 add_library(sdc SHARED $<TARGET_OBJECTS:sdc_objs>)
