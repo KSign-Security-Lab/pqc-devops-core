@@ -51,6 +51,11 @@ if(SDC_WITH_OPENSSL)
   list(APPEND SDC_PROVIDERS openssl)
 endif()
 
+if(NOT SDC_PROVIDERS)
+  message(FATAL_ERROR "At least one SDC_WITH_<provider> must be enabled")
+endif()
+message(STATUS "SDC providers (default order): ${SDC_PROVIDERS}")
+
 # --- libraries -----------------------------------------------------------------
 add_library(sdc SHARED $<TARGET_OBJECTS:sdc_objs>)
 add_library(sdc_static STATIC $<TARGET_OBJECTS:sdc_objs>)
