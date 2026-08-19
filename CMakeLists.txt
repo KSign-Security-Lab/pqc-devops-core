@@ -10,6 +10,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 include(GNUInstallDirs)
+include(CTest)
 find_package(Threads REQUIRED)
 
 option(SDC_WITH_OPENSSL  "Build the OpenSSL 3 provider"           ON)
@@ -70,3 +71,8 @@ set_target_properties(sdc PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJ
 set_target_properties(sdc_static PROPERTIES OUTPUT_NAME sdc)
 add_library(sdc::sdc ALIAS sdc)
 add_library(sdc::sdc_static ALIAS sdc_static)
+
+# --- tests & examples ------------------------------------------------------------
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
