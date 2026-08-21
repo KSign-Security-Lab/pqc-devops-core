@@ -41,6 +41,27 @@ static const aead_kat AEAD[] = {
       "1ae10b594f09e26a7e902ecbd0600691" },
 };
 
+typedef struct { sdc_alg alg; const char *msg, *digest; } hash_kat;
+
+/* FIPS 180-4 / FIPS 202 examples, message "abc" (and "" for SHA-256) */
+static const hash_kat HASH[] = {
+    { SDC_ALG_SHA256, "616263",
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" },
+    { SDC_ALG_SHA256, "",
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { SDC_ALG_SHA384, "616263",
+      "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed"
+      "8086072ba1e7cc2358baeca134c825a7" },
+    { SDC_ALG_SHA512, "616263",
+      "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+      "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f" },
+    { SDC_ALG_SHA3_256, "616263",
+      "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532" },
+    { SDC_ALG_SHA3_512, "616263",
+      "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e"
+      "10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0" },
+};
+
 /* ------------------------------------------------------------------ runner */
 
 static uint8_t A[512], B[512], C[512], D[512], E[512], F[512], G[512];
@@ -67,6 +88,16 @@ static void run_aead(const sdc_ctx *ctx, const char *prov, const aead_kat *v)
              SDC_ERR_AUTH_FAILED, "%s %s tampered tag", prov, v->src);
 }
 
+static void run_hash(const sdc_ctx *ctx, const char *prov, const hash_kat *v)
+{
+    size_t ml = unhex(v->msg, A, sizeof A), dl = unhex(v->digest, B, sizeof B);
+    size_t n = sizeof C;
+    CHECK_ST(sdc_hash(ctx, v->alg, ml ? A : NULL, ml, C, &n), SDC_OK,
+             "%s %s", prov, sdc_alg_name(v->alg));
+    CHECK(n == dl && memcmp(B, C, dl) == 0, "%s %s(%s) digest mismatch",
+          prov, sdc_alg_name(v->alg), v->msg);
+}
+
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
 int main(void)
@@ -87,6 +118,7 @@ int main(void)
                 ran++;                                       \
             }
         RUN(AEAD, run_aead);
+        RUN(HASH, run_hash);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
     }
