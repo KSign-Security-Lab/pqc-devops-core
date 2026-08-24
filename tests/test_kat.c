@@ -62,6 +62,23 @@ static const hash_kat HASH[] = {
       "10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0" },
 };
 
+typedef struct { sdc_alg alg; const char *src, *ikm, *salt, *info, *okm; } hkdf_kat;
+
+static const hkdf_kat HKDF[] = {
+    /* RFC 5869 A.1 */
+    { SDC_ALG_HKDF_SHA256, "RFC5869 A.1",
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "000102030405060708090a0b0c",
+      "f0f1f2f3f4f5f6f7f8f9",
+      "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf"
+      "34007208d5b887185865" },
+    /* RFC 5869 A.3: empty salt and info */
+    { SDC_ALG_HKDF_SHA256, "RFC5869 A.3",
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", "", "",
+      "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d"
+      "9d201395faa4b61a96c8" },
+};
+
 /* ------------------------------------------------------------------ runner */
 
 static uint8_t A[512], B[512], C[512], D[512], E[512], F[512], G[512];
@@ -98,6 +115,15 @@ static void run_hash(const sdc_ctx *ctx, const char *prov, const hash_kat *v)
           prov, sdc_alg_name(v->alg), v->msg);
 }
 
+static void run_hkdf(const sdc_ctx *ctx, const char *prov, const hkdf_kat *v)
+{
+    size_t il = unhex(v->ikm, A, sizeof A), sl = unhex(v->salt, B, sizeof B);
+    size_t fl = unhex(v->info, C, sizeof C), ol = unhex(v->okm, D, sizeof D);
+    CHECK_ST(sdc_hkdf(ctx, v->alg, A, il, sl ? B : NULL, sl, fl ? C : NULL, fl, E, ol),
+             SDC_OK, "%s %s", prov, v->src);
+    CHECK(memcmp(D, E, ol) == 0, "%s %s okm mismatch", prov, v->src);
+}
+
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
 int main(void)
@@ -119,6 +145,7 @@ int main(void)
             }
         RUN(AEAD, run_aead);
         RUN(HASH, run_hash);
+        RUN(HKDF, run_hkdf);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
     }
