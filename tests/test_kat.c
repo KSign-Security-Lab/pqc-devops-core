@@ -79,6 +79,29 @@ static const hkdf_kat HKDF[] = {
       "9d201395faa4b61a96c8" },
 };
 
+typedef struct { sdc_alg alg; const char *src, *sk, *pk, *msg, *sig; } sig_kat;
+
+static const sig_kat SIG[] = {
+    /* RFC 8032 7.1 TEST 1 / TEST 2 (deterministic: sign and verify) */
+    { SDC_ALG_ED25519, "RFC8032 T1",
+      "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", "",
+      "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b" },
+    { SDC_ALG_ED25519, "RFC8032 T2",
+      "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", "72",
+      "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00" },
+    /* RFC 6979 A.2.5, P-256 / SHA-256, message "sample" (verify only:
+     * providers may use randomised nonces) */
+    { SDC_ALG_ECDSA_P256_SHA256, "RFC6979 A.2.5",
+      "c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721",
+      "0460fed4ba255a9d31c961eb74c6356d68c049b8923b61fa6ce669622e60f29fb6"
+      "7903fe1008b8bc99a41ae9e95628bc64f2f1b20c2d7e9f5177a3c294d4462299",
+      "73616d706c65",
+      "efd48b2aacb6a8fd1140dd9cd45e81d69d2c877b56aaf991c34d0ea84eaf3716"
+      "f7cb1c942d657c41d436c7a1b6e29f65f3e900dbb9aff4064dc4ab2f843acda8" },
+};
+
 /* ------------------------------------------------------------------ runner */
 
 static uint8_t A[512], B[512], C[512], D[512], E[512], F[512], G[512];
@@ -124,6 +147,30 @@ static void run_hkdf(const sdc_ctx *ctx, const char *prov, const hkdf_kat *v)
     CHECK(memcmp(D, E, ol) == 0, "%s %s okm mismatch", prov, v->src);
 }
 
+static void run_sig(const sdc_ctx *ctx, const char *prov, const sig_kat *v)
+{
+    size_t skl = unhex(v->sk, A, sizeof A), pkl = unhex(v->pk, B, sizeof B);
+    size_t ml = unhex(v->msg, C, sizeof C), gl = unhex(v->sig, D, sizeof D);
+
+    CHECK_ST(sdc_verify(ctx, v->alg, B, pkl, C, ml, D, gl), SDC_OK,
+             "%s %s verify known sig", prov, v->src);
+
+    size_t n = sizeof E;
+    CHECK_ST(sdc_sign(ctx, v->alg, A, skl, C, ml, E, &n), SDC_OK, "%s %s sign", prov, v->src);
+    if (v->alg == SDC_ALG_ED25519)
+        CHECK(n == gl && memcmp(D, E, gl) == 0, "%s %s signature mismatch", prov, v->src);
+    CHECK_ST(sdc_verify(ctx, v->alg, B, pkl, C, ml, E, n), SDC_OK,
+             "%s %s verify own sig", prov, v->src);
+
+    D[gl - 1] ^= 1;
+    CHECK_ST(sdc_verify(ctx, v->alg, B, pkl, C, ml, D, gl), SDC_ERR_VERIFY_FAILED,
+             "%s %s tampered sig", prov, v->src);
+    D[gl - 1] ^= 1;
+    C[0] ^= 1;
+    CHECK_ST(sdc_verify(ctx, v->alg, B, pkl, C, ml ? ml : 1, D, gl), SDC_ERR_VERIFY_FAILED,
+             "%s %s tampered msg", prov, v->src);
+}
+
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
 int main(void)
@@ -146,6 +193,7 @@ int main(void)
         RUN(AEAD, run_aead);
         RUN(HASH, run_hash);
         RUN(HKDF, run_hkdf);
+        RUN(SIG, run_sig);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
     }
