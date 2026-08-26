@@ -187,6 +187,46 @@ static sdc_status ntl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
     return SDC_OK;
 }
 
+/* ------------------------------------------------------------- signatures */
+
+static void mpz_to_be32(uint8_t out[32], const mpz_t v)
+{
+    size_t n = 0;
+    memset(out, 0, 32);
+    if (mpz_sizeinbase(v, 256) <= 32 && mpz_sgn(v) > 0) {
+        uint8_t tmp[32];
+        mpz_export(tmp, &n, 1, 1, 1, 0, v);
+        memcpy(out + 32 - n, tmp, n);
+        sdc_memzero(tmp, sizeof(tmp));
+    }
+}
+
+static int ecc_pub_to_raw(const struct ecc_point *p, uint8_t out[65])
+{
+    mpz_t x, y;
+    mpz_inits(x, y, NULL);
+    ecc_point_get(p, x, y);
+    out[0] = 0x04;
+    mpz_to_be32(out + 1, x);
+    mpz_to_be32(out + 33, y);
+    mpz_clears(x, y, NULL);
+    return 1;
+}
+
+static int ecc_pub_from_raw(struct ecc_point *p, const uint8_t in[65])
+{
+    int ok;
+    mpz_t x, y;
+    if (in[0] != 0x04)
+        return 0;
+    mpz_inits(x, y, NULL);
+    mpz_import(x, 32, 1, 1, 1, 0, in + 1);
+    mpz_import(y, 32, 1, 1, 1, 0, in + 33);
+    ok = ecc_point_set(p, x, y); /* checks the point is on the curve */
+    mpz_clears(x, y, NULL);
+    return ok;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
