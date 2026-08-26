@@ -117,10 +117,48 @@ static sdc_status ntl_aead_decrypt(sdc_alg alg, const uint8_t *key,
     return memeql_sec(calc, tag, 16) ? SDC_OK : SDC_ERR_AUTH_FAILED;
 }
 
+/* ------------------------------------------------------------- hash / KDF */
+
+static sdc_status ntl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
+                           uint8_t *out)
+{
+    switch (alg) {
+    case SDC_ALG_SHA256: {
+        struct sha256_ctx c;
+        sha256_init(&c); sha256_update(&c, in_len, in); sha256_digest(&c, 32, out);
+        break;
+    }
+    case SDC_ALG_SHA384: {
+        struct sha384_ctx c;
+        sha384_init(&c); sha384_update(&c, in_len, in); sha384_digest(&c, 48, out);
+        break;
+    }
+    case SDC_ALG_SHA512: {
+        struct sha512_ctx c;
+        sha512_init(&c); sha512_update(&c, in_len, in); sha512_digest(&c, 64, out);
+        break;
+    }
+    case SDC_ALG_SHA3_256: {
+        struct sha3_256_ctx c;
+        sha3_256_init(&c); sha3_256_update(&c, in_len, in); sha3_256_digest(&c, 32, out);
+        break;
+    }
+    case SDC_ALG_SHA3_512: {
+        struct sha3_512_ctx c;
+        sha3_512_init(&c); sha3_512_update(&c, in_len, in); sha3_512_digest(&c, 64, out);
+        break;
+    }
+    default:
+        return SDC_ERR_UNSUPPORTED;
+    }
+    return SDC_OK;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
     .random       = ntl_random,
     .aead_encrypt = ntl_aead_encrypt,
     .aead_decrypt = ntl_aead_decrypt,
+    .hash         = ntl_hash,
 };
