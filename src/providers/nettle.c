@@ -154,6 +154,39 @@ static sdc_status ntl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
     return SDC_OK;
 }
 
+static sdc_status ntl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
+                           const uint8_t *salt, size_t salt_len,
+                           const uint8_t *info, size_t info_len,
+                           uint8_t *out, size_t out_len)
+{
+    uint8_t prk[SHA512_DIGEST_SIZE];
+    if (alg == SDC_ALG_HKDF_SHA256) {
+        struct hmac_sha256_ctx c;
+        hmac_sha256_set_key(&c, salt_len, salt);
+        hkdf_extract(&c, (nettle_hash_update_func *)hmac_sha256_update,
+                     (nettle_hash_digest_func *)hmac_sha256_digest,
+                     SHA256_DIGEST_SIZE, ikm_len, ikm, prk);
+        hmac_sha256_set_key(&c, SHA256_DIGEST_SIZE, prk);
+        hkdf_expand(&c, (nettle_hash_update_func *)hmac_sha256_update,
+                    (nettle_hash_digest_func *)hmac_sha256_digest,
+                    SHA256_DIGEST_SIZE, info_len, info, out_len, out);
+        sdc_memzero(&c, sizeof(c));
+    } else {
+        struct hmac_sha512_ctx c;
+        hmac_sha512_set_key(&c, salt_len, salt);
+        hkdf_extract(&c, (nettle_hash_update_func *)hmac_sha512_update,
+                     (nettle_hash_digest_func *)hmac_sha512_digest,
+                     SHA512_DIGEST_SIZE, ikm_len, ikm, prk);
+        hmac_sha512_set_key(&c, SHA512_DIGEST_SIZE, prk);
+        hkdf_expand(&c, (nettle_hash_update_func *)hmac_sha512_update,
+                    (nettle_hash_digest_func *)hmac_sha512_digest,
+                    SHA512_DIGEST_SIZE, info_len, info, out_len, out);
+        sdc_memzero(&c, sizeof(c));
+    }
+    sdc_memzero(prk, sizeof(prk));
+    return SDC_OK;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
@@ -161,4 +194,5 @@ const sdc_provider sdc_provider_nettle = {
     .aead_encrypt = ntl_aead_encrypt,
     .aead_decrypt = ntl_aead_decrypt,
     .hash         = ntl_hash,
+    .hkdf         = ntl_hkdf,
 };
