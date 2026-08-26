@@ -62,8 +62,65 @@ static void ntl_rng(void *ctx, size_t len, uint8_t *dst)
         memset(dst, 0, len); /* unreachable in practice; caller checks keys */
 }
 
+/* ------------------------------------------------------------------- AEAD */
+
+static sdc_status ntl_aead_encrypt(sdc_alg alg, const uint8_t *key,
+                                   const uint8_t *nonce,
+                                   const uint8_t *aad, size_t aad_len,
+                                   const uint8_t *pt, size_t pt_len,
+                                   uint8_t *ct, uint8_t *tag)
+{
+    if (alg == SDC_ALG_AES_256_GCM) {
+        struct gcm_aes256_ctx c;
+        gcm_aes256_set_key(&c, key);
+        gcm_aes256_set_iv(&c, 12, nonce);
+        gcm_aes256_update(&c, aad_len, aad);
+        gcm_aes256_encrypt(&c, pt_len, ct, pt);
+        gcm_aes256_digest(&c, 16, tag);
+        sdc_memzero(&c, sizeof(c));
+    } else {
+        struct chacha_poly1305_ctx c;
+        chacha_poly1305_set_key(&c, key);
+        chacha_poly1305_set_nonce(&c, nonce);
+        chacha_poly1305_update(&c, aad_len, aad);
+        chacha_poly1305_encrypt(&c, pt_len, ct, pt);
+        chacha_poly1305_digest(&c, 16, tag);
+        sdc_memzero(&c, sizeof(c));
+    }
+    return SDC_OK;
+}
+
+static sdc_status ntl_aead_decrypt(sdc_alg alg, const uint8_t *key,
+                                   const uint8_t *nonce,
+                                   const uint8_t *aad, size_t aad_len,
+                                   const uint8_t *ct, size_t ct_len,
+                                   const uint8_t *tag, uint8_t *pt)
+{
+    uint8_t calc[16];
+    if (alg == SDC_ALG_AES_256_GCM) {
+        struct gcm_aes256_ctx c;
+        gcm_aes256_set_key(&c, key);
+        gcm_aes256_set_iv(&c, 12, nonce);
+        gcm_aes256_update(&c, aad_len, aad);
+        gcm_aes256_decrypt(&c, ct_len, pt, ct);
+        gcm_aes256_digest(&c, 16, calc);
+        sdc_memzero(&c, sizeof(c));
+    } else {
+        struct chacha_poly1305_ctx c;
+        chacha_poly1305_set_key(&c, key);
+        chacha_poly1305_set_nonce(&c, nonce);
+        chacha_poly1305_update(&c, aad_len, aad);
+        chacha_poly1305_decrypt(&c, ct_len, pt, ct);
+        chacha_poly1305_digest(&c, 16, calc);
+        sdc_memzero(&c, sizeof(c));
+    }
+    return memeql_sec(calc, tag, 16) ? SDC_OK : SDC_ERR_AUTH_FAILED;
+}
+
 const sdc_provider sdc_provider_nettle = {
-    .name     = "nettle",
-    .supports = ntl_supports,
-    .random   = ntl_random,
+    .name         = "nettle",
+    .supports     = ntl_supports,
+    .random       = ntl_random,
+    .aead_encrypt = ntl_aead_encrypt,
+    .aead_decrypt = ntl_aead_decrypt,
 };
