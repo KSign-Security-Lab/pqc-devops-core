@@ -253,6 +253,42 @@ static sdc_status ntl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
     return SDC_OK;
 }
 
+static sdc_status ntl_sign(sdc_alg alg, const uint8_t *sk,
+                           const uint8_t *msg, size_t msg_len,
+                           uint8_t *sig, size_t *sig_len)
+{
+    if (alg == SDC_ALG_ED25519) {
+        uint8_t pub[32];
+        ed25519_sha512_public_key(pub, sk);
+        ed25519_sha512_sign(pub, sk, msg_len, msg, sig);
+        *sig_len = 64;
+        return SDC_OK;
+    }
+
+    sdc_status st = SDC_ERR_INVALID_ARG;
+    const struct ecc_curve *curve = nettle_get_secp_256r1();
+    struct ecc_scalar key;
+    struct dsa_signature ds;
+    uint8_t digest[32];
+    mpz_t d;
+    ntl_hash(SDC_ALG_SHA256, msg, msg_len, digest);
+    ecc_scalar_init(&key, curve);
+    dsa_signature_init(&ds);
+    mpz_init(d);
+    mpz_import(d, 32, 1, 1, 1, 0, sk);
+    if (ecc_scalar_set(&key, d)) { /* rejects 0 and >= n */
+        ecdsa_sign(&key, NULL, ntl_rng, sizeof(digest), digest, &ds);
+        mpz_to_be32(sig, ds.r);
+        mpz_to_be32(sig + 32, ds.s);
+        *sig_len = 64;
+        st = SDC_OK;
+    }
+    mpz_clear(d);
+    dsa_signature_clear(&ds);
+    ecc_scalar_clear(&key);
+    return st;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
@@ -262,4 +298,5 @@ const sdc_provider sdc_provider_nettle = {
     .hash         = ntl_hash,
     .hkdf         = ntl_hkdf,
     .sig_keypair  = ntl_sig_keypair,
+    .sign         = ntl_sign,
 };
