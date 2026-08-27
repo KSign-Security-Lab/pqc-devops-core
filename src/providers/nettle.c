@@ -289,6 +289,34 @@ static sdc_status ntl_sign(sdc_alg alg, const uint8_t *sk,
     return st;
 }
 
+static sdc_status ntl_verify(sdc_alg alg, const uint8_t *pk,
+                             const uint8_t *msg, size_t msg_len,
+                             const uint8_t *sig, size_t sig_len)
+{
+    if (sig_len != 64)
+        return SDC_ERR_VERIFY_FAILED;
+    if (alg == SDC_ALG_ED25519)
+        return ed25519_sha512_verify(pk, msg_len, msg, sig) ? SDC_OK
+                                                            : SDC_ERR_VERIFY_FAILED;
+
+    sdc_status st = SDC_ERR_VERIFY_FAILED;
+    const struct ecc_curve *curve = nettle_get_secp_256r1();
+    struct ecc_point pub;
+    struct dsa_signature ds;
+    uint8_t digest[32];
+    ntl_hash(SDC_ALG_SHA256, msg, msg_len, digest);
+    ecc_point_init(&pub, curve);
+    dsa_signature_init(&ds);
+    mpz_import(ds.r, 32, 1, 1, 1, 0, sig);
+    mpz_import(ds.s, 32, 1, 1, 1, 0, sig + 32);
+    if (ecc_pub_from_raw(&pub, pk) &&
+        ecdsa_verify(&pub, sizeof(digest), digest, &ds))
+        st = SDC_OK;
+    dsa_signature_clear(&ds);
+    ecc_point_clear(&pub);
+    return st;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
@@ -299,4 +327,5 @@ const sdc_provider sdc_provider_nettle = {
     .hkdf         = ntl_hkdf,
     .sig_keypair  = ntl_sig_keypair,
     .sign         = ntl_sign,
+    .verify       = ntl_verify,
 };
