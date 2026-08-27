@@ -227,6 +227,32 @@ static int ecc_pub_from_raw(struct ecc_point *p, const uint8_t in[65])
     return ok;
 }
 
+static sdc_status ntl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    if (alg == SDC_ALG_ED25519) {
+        sdc_status st = ntl_random(sk, 32);
+        if (st == SDC_OK)
+            ed25519_sha512_public_key(pk, sk);
+        return st;
+    }
+
+    const struct ecc_curve *curve = nettle_get_secp_256r1();
+    struct ecc_point pub;
+    struct ecc_scalar key;
+    mpz_t d;
+    ecc_point_init(&pub, curve);
+    ecc_scalar_init(&key, curve);
+    mpz_init(d);
+    ecdsa_generate_keypair(&pub, &key, NULL, ntl_rng);
+    ecc_scalar_get(&key, d);
+    mpz_to_be32(sk, d);
+    ecc_pub_to_raw(&pub, pk);
+    mpz_clear(d);
+    ecc_scalar_clear(&key);
+    ecc_point_clear(&pub);
+    return SDC_OK;
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
@@ -235,4 +261,5 @@ const sdc_provider sdc_provider_nettle = {
     .aead_decrypt = ntl_aead_decrypt,
     .hash         = ntl_hash,
     .hkdf         = ntl_hkdf,
+    .sig_keypair  = ntl_sig_keypair,
 };
