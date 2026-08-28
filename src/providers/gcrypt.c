@@ -46,6 +46,27 @@ static sdc_status gc_random(uint8_t *buf, size_t len)
     return SDC_OK;
 }
 
+/* ------------------------------------------------------------------- AEAD */
+
+static gcry_error_t aead_open(gcry_cipher_hd_t *h, sdc_alg alg,
+                              const uint8_t *key, const uint8_t *nonce,
+                              const uint8_t *aad, size_t aad_len)
+{
+    gcry_error_t e = alg == SDC_ALG_AES_256_GCM
+        ? gcry_cipher_open(h, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, 0)
+        : gcry_cipher_open(h, GCRY_CIPHER_CHACHA20, GCRY_CIPHER_MODE_POLY1305, 0);
+    if (e)
+        return e;
+    if ((e = gcry_cipher_setkey(*h, key, 32)) ||
+        (e = gcry_cipher_setiv(*h, nonce, 12)) ||
+        (e = gcry_cipher_authenticate(*h, aad, aad_len)) ||
+        (e = gcry_cipher_final(*h))) {
+        gcry_cipher_close(*h);
+        *h = NULL;
+    }
+    return e;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name     = "gcrypt",
     .init     = gc_init,
