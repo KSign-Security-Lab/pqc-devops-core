@@ -1,5 +1,6 @@
 /* Nettle / Hogweed provider. SPDX-License-Identifier: Apache-2.0 */
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/random.h>
 
@@ -53,13 +54,13 @@ static sdc_status ntl_random(uint8_t *buf, size_t len)
     return SDC_OK;
 }
 
-/* nettle_random_func adapter (aborts nothing; getrandom on Linux does not
- * fail for blocking calls once the pool is initialised). */
+/* nettle_random_func adapter. It cannot report errors, and continuing with
+ * predictable randomness (e.g. an ECDSA nonce) would leak keys, so abort. */
 static void ntl_rng(void *ctx, size_t len, uint8_t *dst)
 {
     (void)ctx;
     if (ntl_random(dst, len) != SDC_OK)
-        memset(dst, 0, len); /* unreachable in practice; caller checks keys */
+        abort();
 }
 
 /* ------------------------------------------------------------------- AEAD */
