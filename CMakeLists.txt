@@ -11,9 +11,11 @@ endif()
 
 include(GNUInstallDirs)
 include(CTest)
+find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 
 option(SDC_WITH_OPENSSL  "Build the OpenSSL 3 provider"           ON)
+option(SDC_WITH_NETTLE   "Build the Nettle/Hogweed provider"      ON)
 option(SDC_WERROR        "Treat warnings as errors"               OFF)
 option(SDC_SANITIZE      "Build with ASan + UBSan"                OFF)
 
@@ -50,6 +52,18 @@ if(SDC_WITH_OPENSSL)
   list(APPEND SDC_LINK_LIBS OpenSSL::Crypto)
   string(APPEND SDC_PC_REQUIRES " libcrypto")
   list(APPEND SDC_PROVIDERS openssl)
+endif()
+
+# --- Nettle ------------------------------------------------------------------
+if(SDC_WITH_NETTLE)
+  pkg_check_modules(NETTLE REQUIRED IMPORTED_TARGET nettle>=3.6 hogweed>=3.6)
+  find_library(GMP_LIBRARY gmp REQUIRED)
+  target_sources(sdc_objs PRIVATE src/providers/nettle.c)
+  target_compile_definitions(sdc_objs PRIVATE SDC_HAVE_NETTLE)
+  target_link_libraries(sdc_objs PRIVATE PkgConfig::NETTLE)
+  list(APPEND SDC_LINK_LIBS PkgConfig::NETTLE ${GMP_LIBRARY})
+  string(APPEND SDC_PC_REQUIRES " nettle hogweed")
+  list(APPEND SDC_PROVIDERS nettle)
 endif()
 
 if(NOT SDC_PROVIDERS)
