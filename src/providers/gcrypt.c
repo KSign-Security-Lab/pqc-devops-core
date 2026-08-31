@@ -67,9 +67,49 @@ static gcry_error_t aead_open(gcry_cipher_hd_t *h, sdc_alg alg,
     return e;
 }
 
+static sdc_status gc_aead_encrypt(sdc_alg alg, const uint8_t *key,
+                                  const uint8_t *nonce,
+                                  const uint8_t *aad, size_t aad_len,
+                                  const uint8_t *pt, size_t pt_len,
+                                  uint8_t *ct, uint8_t *tag)
+{
+    gcry_cipher_hd_t h;
+    if (aead_open(&h, alg, key, nonce, aad, aad_len))
+        return SDC_ERR_PROVIDER;
+    sdc_status st = SDC_ERR_PROVIDER;
+    if ((pt_len == 0 || !gcry_cipher_encrypt(h, ct, pt_len, pt, pt_len)) &&
+        !gcry_cipher_gettag(h, tag, 16))
+        st = SDC_OK;
+    gcry_cipher_close(h);
+    return st;
+}
+
+static sdc_status gc_aead_decrypt(sdc_alg alg, const uint8_t *key,
+                                  const uint8_t *nonce,
+                                  const uint8_t *aad, size_t aad_len,
+                                  const uint8_t *ct, size_t ct_len,
+                                  const uint8_t *tag, uint8_t *pt)
+{
+    gcry_cipher_hd_t h;
+    if (aead_open(&h, alg, key, nonce, aad, aad_len))
+        return SDC_ERR_PROVIDER;
+    sdc_status st = SDC_ERR_PROVIDER;
+    if (pt_len_ok:
+        ct_len == 0 || !gcry_cipher_decrypt(h, pt, ct_len, ct, ct_len)) {
+        gcry_error_t e = gcry_cipher_checktag(h, tag, 16);
+        st = !e ? SDC_OK
+                : gcry_err_code(e) == GPG_ERR_CHECKSUM ? SDC_ERR_AUTH_FAILED
+                                                       : SDC_ERR_PROVIDER;
+    }
+    gcry_cipher_close(h);
+    return st;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
-    .name     = "gcrypt",
-    .init     = gc_init,
-    .supports = gc_supports,
-    .random   = gc_random,
+    .name         = "gcrypt",
+    .init         = gc_init,
+    .supports     = gc_supports,
+    .random       = gc_random,
+    .aead_encrypt = gc_aead_encrypt,
+    .aead_decrypt = gc_aead_decrypt,
 };
