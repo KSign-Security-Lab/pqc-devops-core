@@ -94,8 +94,7 @@ static sdc_status gc_aead_decrypt(sdc_alg alg, const uint8_t *key,
     if (aead_open(&h, alg, key, nonce, aad, aad_len))
         return SDC_ERR_PROVIDER;
     sdc_status st = SDC_ERR_PROVIDER;
-    if (pt_len_ok:
-        ct_len == 0 || !gcry_cipher_decrypt(h, pt, ct_len, ct, ct_len)) {
+    if (ct_len == 0 || !gcry_cipher_decrypt(h, pt, ct_len, ct, ct_len)) {
         gcry_error_t e = gcry_cipher_checktag(h, tag, 16);
         st = !e ? SDC_OK
                 : gcry_err_code(e) == GPG_ERR_CHECKSUM ? SDC_ERR_AUTH_FAILED
