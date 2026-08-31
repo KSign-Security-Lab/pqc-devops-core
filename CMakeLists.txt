@@ -16,6 +16,7 @@ find_package(Threads REQUIRED)
 
 option(SDC_WITH_OPENSSL  "Build the OpenSSL 3 provider"           ON)
 option(SDC_WITH_NETTLE   "Build the Nettle/Hogweed provider"      ON)
+option(SDC_WITH_GCRYPT   "Build the libgcrypt provider"           ON)
 option(SDC_WERROR        "Treat warnings as errors"               OFF)
 option(SDC_SANITIZE      "Build with ASan + UBSan"                OFF)
 
@@ -64,6 +65,17 @@ if(SDC_WITH_NETTLE)
   list(APPEND SDC_LINK_LIBS PkgConfig::NETTLE ${GMP_LIBRARY})
   string(APPEND SDC_PC_REQUIRES " nettle hogweed")
   list(APPEND SDC_PROVIDERS nettle)
+endif()
+
+# --- libgcrypt ---------------------------------------------------------------
+if(SDC_WITH_GCRYPT)
+  pkg_check_modules(GCRYPT REQUIRED IMPORTED_TARGET libgcrypt>=1.8)
+  target_sources(sdc_objs PRIVATE src/providers/gcrypt.c)
+  target_compile_definitions(sdc_objs PRIVATE SDC_HAVE_GCRYPT)
+  target_link_libraries(sdc_objs PRIVATE PkgConfig::GCRYPT)
+  list(APPEND SDC_LINK_LIBS PkgConfig::GCRYPT)
+  string(APPEND SDC_PC_REQUIRES " libgcrypt")
+  list(APPEND SDC_PROVIDERS gcrypt)
 endif()
 
 if(NOT SDC_PROVIDERS)
