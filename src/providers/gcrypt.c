@@ -104,6 +104,28 @@ static sdc_status gc_aead_decrypt(sdc_alg alg, const uint8_t *key,
     return st;
 }
 
+/* ------------------------------------------------------------------- hash */
+
+static int md_algo(sdc_alg alg)
+{
+    switch (alg) {
+    case SDC_ALG_SHA256:   return GCRY_MD_SHA256;
+    case SDC_ALG_SHA384:   return GCRY_MD_SHA384;
+    case SDC_ALG_SHA512:   return GCRY_MD_SHA512;
+    case SDC_ALG_SHA3_256: return GCRY_MD_SHA3_256;
+    case SDC_ALG_SHA3_512: return GCRY_MD_SHA3_512;
+    default:               return 0;
+    }
+}
+
+static sdc_status gc_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
+                          uint8_t *out)
+{
+    static const uint8_t empty[1];
+    gcry_md_hash_buffer(md_algo(alg), out, in ? in : empty, in_len);
+    return SDC_OK;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
@@ -111,4 +133,5 @@ const sdc_provider sdc_provider_gcrypt = {
     .random       = gc_random,
     .aead_encrypt = gc_aead_encrypt,
     .aead_decrypt = gc_aead_decrypt,
+    .hash         = gc_hash,
 };
