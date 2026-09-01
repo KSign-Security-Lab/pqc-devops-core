@@ -167,6 +167,38 @@ static gcry_mpi_t mpi_from(const uint8_t *buf, size_t n)
     return gcry_mpi_scan(&m, GCRYMPI_FMT_USG, buf, n, NULL) ? NULL : m;
 }
 
+static sdc_status gc_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    gcry_sexp_t params = NULL, kp = NULL;
+    sdc_status st = SDC_ERR_PROVIDER;
+    int ed = alg == SDC_ALG_ED25519;
+    const char *spec = ed ? "(genkey (ecc (curve Ed25519)(flags eddsa)))"
+                          : "(genkey (ecc (curve \"NIST P-256\")))";
+    if (gcry_sexp_new(&params, spec, 0, 1) || gcry_pk_genkey(&kp, params))
+        goto out;
+    if (ed) {
+        /* q may carry a 0x40 "compact" prefix. */
+        uint8_t q[33];
+        gcry_sexp_t t = gcry_sexp_find_token(kp, "q", 0);
+        size_t len = 0;
+        const char *d = t ? gcry_sexp_nth_data(t, 1, &len) : NULL;
+        if (d && (len == 32 || (len == 33 && (uint8_t)d[0] == 0x40))) {
+            memcpy(q, d, len);
+            memcpy(pk, len == 33 ? q + 1 : q, 32);
+            if (sexp_get_fixed(kp, "d", sk, 32, 0))
+                st = SDC_OK;
+        }
+        gcry_sexp_release(t);
+    } else if (sexp_get_fixed(kp, "q", pk, 65, 0) && pk[0] == 0x04 &&
+               sexp_get_fixed(kp, "d", sk, 32, 1)) {
+        st = SDC_OK;
+    }
+out:
+    gcry_sexp_release(kp);
+    gcry_sexp_release(params);
+    return st;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
@@ -175,4 +207,5 @@ const sdc_provider sdc_provider_gcrypt = {
     .aead_encrypt = gc_aead_encrypt,
     .aead_decrypt = gc_aead_decrypt,
     .hash         = gc_hash,
+    .sig_keypair  = gc_sig_keypair,
 };
