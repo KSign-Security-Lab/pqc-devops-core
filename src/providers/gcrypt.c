@@ -126,6 +126,41 @@ static sdc_status gc_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
     return SDC_OK;
 }
 
+/* ------------------------------------------------------------- signatures */
+
+/* Copy an S-expression token's value into a fixed big-endian buffer. */
+static int sexp_get_fixed(gcry_sexp_t s, const char *tok, uint8_t *out, size_t n,
+                          int as_mpi)
+{
+    int ok = 0;
+    gcry_sexp_t t = gcry_sexp_find_token(s, tok, 0);
+    if (!t)
+        return 0;
+    if (as_mpi) {
+        gcry_mpi_t m = gcry_sexp_nth_mpi(t, 1, GCRYMPI_FMT_USG);
+        size_t w = 0;
+        if (m && (gcry_mpi_get_nbits(m) + 7) / 8 <= n) {
+            memset(out, 0, n);
+            if (!gcry_mpi_print(GCRYMPI_FMT_USG, out, n, &w, m)) {
+                memmove(out + n - w, out, w);
+                memset(out, 0, n - w);
+                ok = 1;
+            }
+        }
+        gcry_mpi_release(m);
+    } else {
+        size_t len = 0;
+        const char *d = gcry_sexp_nth_data(t, 1, &len);
+        if (d && len <= n) {
+            memset(out, 0, n);
+            memcpy(out + n - len, d, len);
+            ok = 1;
+        }
+    }
+    gcry_sexp_release(t);
+    return ok;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
