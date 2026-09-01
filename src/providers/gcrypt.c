@@ -161,6 +161,12 @@ static int sexp_get_fixed(gcry_sexp_t s, const char *tok, uint8_t *out, size_t n
     return ok;
 }
 
+static gcry_mpi_t mpi_from(const uint8_t *buf, size_t n)
+{
+    gcry_mpi_t m = NULL;
+    return gcry_mpi_scan(&m, GCRYMPI_FMT_USG, buf, n, NULL) ? NULL : m;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
