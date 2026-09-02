@@ -199,6 +199,54 @@ out:
     return st;
 }
 
+static sdc_status gc_sign(sdc_alg alg, const uint8_t *sk,
+                          const uint8_t *msg, size_t msg_len,
+                          uint8_t *sig, size_t *sig_len)
+{
+    static const uint8_t empty[1];
+    gcry_sexp_t key = NULL, data = NULL, s = NULL;
+    gcry_mpi_t d = NULL;
+    sdc_status st = SDC_ERR_PROVIDER;
+    gcry_error_t e;
+
+    if (!msg)
+        msg = empty;
+    if (alg == SDC_ALG_ED25519) {
+        e = gcry_sexp_build(&key, NULL,
+                            "(private-key (ecc (curve Ed25519)(flags eddsa)(d %b)))",
+                            32, sk);
+        if (!e)
+            e = gcry_sexp_build(&data, NULL,
+                                "(data (flags eddsa)(hash-algo sha512)(value %b))",
+                                (int)msg_len, msg);
+    } else {
+        uint8_t digest[32];
+        gc_hash(SDC_ALG_SHA256, msg, msg_len, digest);
+        d = mpi_from(sk, 32);
+        e = d ? gcry_sexp_build(&key, NULL,
+                                "(private-key (ecc (curve \"NIST P-256\")(d %m)))", d)
+              : GPG_ERR_INV_VALUE;
+        if (!e)
+            e = gcry_sexp_build(&data, NULL,
+                                "(data (flags rfc6979)(hash sha256 %b))", 32, digest);
+    }
+    if (e || gcry_pk_sign(&s, data, key))
+        goto out;
+
+    int as_mpi = alg != SDC_ALG_ED25519;
+    if (sexp_get_fixed(s, "r", sig, 32, as_mpi) &&
+        sexp_get_fixed(s, "s", sig + 32, 32, as_mpi)) {
+        *sig_len = 64;
+        st = SDC_OK;
+    }
+out:
+    gcry_mpi_release(d);
+    gcry_sexp_release(s);
+    gcry_sexp_release(data);
+    gcry_sexp_release(key);
+    return st;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
@@ -208,4 +256,5 @@ const sdc_provider sdc_provider_gcrypt = {
     .aead_decrypt = gc_aead_decrypt,
     .hash         = gc_hash,
     .sig_keypair  = gc_sig_keypair,
+    .sign         = gc_sign,
 };
