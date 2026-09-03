@@ -247,6 +247,60 @@ out:
     return st;
 }
 
+static sdc_status gc_verify(sdc_alg alg, const uint8_t *pk,
+                            const uint8_t *msg, size_t msg_len,
+                            const uint8_t *sig, size_t sig_len)
+{
+    static const uint8_t empty[1];
+    gcry_sexp_t key = NULL, data = NULL, s = NULL;
+    gcry_mpi_t r = NULL, sv = NULL;
+    sdc_status st = SDC_ERR_PROVIDER;
+    gcry_error_t e;
+
+    if (sig_len != 64)
+        return SDC_ERR_VERIFY_FAILED;
+    if (!msg)
+        msg = empty;
+    if (alg == SDC_ALG_ED25519) {
+        e = gcry_sexp_build(&key, NULL,
+                            "(public-key (ecc (curve Ed25519)(flags eddsa)(q %b)))",
+                            32, pk);
+        if (!e)
+            e = gcry_sexp_build(&data, NULL,
+                                "(data (flags eddsa)(hash-algo sha512)(value %b))",
+                                (int)msg_len, msg);
+        if (!e)
+            e = gcry_sexp_build(&s, NULL, "(sig-val (eddsa (r %b)(s %b)))",
+                                32, sig, 32, sig + 32);
+    } else {
+        uint8_t digest[32];
+        gc_hash(SDC_ALG_SHA256, msg, msg_len, digest);
+        r = mpi_from(sig, 32);
+        sv = mpi_from(sig + 32, 32);
+        e = gcry_sexp_build(&key, NULL,
+                            "(public-key (ecc (curve \"NIST P-256\")(q %b)))", 65, pk);
+        if (!e)
+            e = gcry_sexp_build(&data, NULL, "(data (flags raw)(value %b))",
+                                32, digest);
+        if (!e)
+            e = r && sv ? gcry_sexp_build(&s, NULL, "(sig-val (ecdsa (r %m)(s %m)))",
+                                          r, sv)
+                        : GPG_ERR_INV_VALUE;
+    }
+    if (!e) {
+        e = gcry_pk_verify(s, data, key);
+        /* Any verification-time error (bad sig, invalid point, ...) means
+         * the signature is not valid for this key. */
+        st = e ? SDC_ERR_VERIFY_FAILED : SDC_OK;
+    }
+    gcry_mpi_release(r);
+    gcry_mpi_release(sv);
+    gcry_sexp_release(s);
+    gcry_sexp_release(data);
+    gcry_sexp_release(key);
+    return st;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
@@ -257,4 +311,5 @@ const sdc_provider sdc_provider_gcrypt = {
     .hash         = gc_hash,
     .sig_keypair  = gc_sig_keypair,
     .sign         = gc_sign,
+    .verify       = gc_verify,
 };
