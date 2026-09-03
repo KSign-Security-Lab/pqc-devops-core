@@ -38,6 +38,25 @@ static void aead(sdc_alg alg, size_t x, size_t y)
     }
 }
 
+static void digest(sdc_alg alg, size_t x, size_t y)
+{
+    uint8_t a[64], b[64];
+    size_t na = sizeof a, nb = sizeof b;
+    sdc_hash(ctxs[x], alg, msg, sizeof msg, a, &na);
+    sdc_hash(ctxs[y], alg, msg, sizeof msg, b, &nb);
+    CHECK(na == nb && memcmp(a, b, na) == 0, "%s %s vs %s", sdc_alg_name(alg), names[x], names[y]);
+}
+
+static void kdf(sdc_alg alg, size_t x, size_t y)
+{
+    uint8_t a[300], b[300];
+    CHECK_ST(sdc_hkdf(ctxs[x], alg, msg, 50, msg + 50, 20, msg + 70, 10, a, sizeof a), SDC_OK,
+             "%s %s", sdc_alg_name(alg), names[x]);
+    CHECK_ST(sdc_hkdf(ctxs[y], alg, msg, 50, msg + 50, 20, msg + 70, 10, b, sizeof b), SDC_OK,
+             "%s %s", sdc_alg_name(alg), names[y]);
+    CHECK(memcmp(a, b, sizeof a) == 0, "%s %s vs %s", sdc_alg_name(alg), names[x], names[y]);
+}
+
 int main(void)
 {
     sdc_init();
@@ -66,6 +85,8 @@ int main(void)
                 pairs++;
                 switch (ai.family) {
                 case SDC_FAMILY_AEAD: aead(alg, x, y); break;
+                case SDC_FAMILY_HASH: digest(alg, x, y); break;
+                case SDC_FAMILY_KDF:  kdf(alg, x, y); break;
                 default: break;
                 }
             }
