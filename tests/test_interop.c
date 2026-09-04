@@ -57,6 +57,32 @@ static void kdf(sdc_alg alg, size_t x, size_t y)
     CHECK(memcmp(a, b, sizeof a) == 0, "%s %s vs %s", sdc_alg_name(alg), names[x], names[y]);
 }
 
+static void sig(sdc_alg alg, size_t x, size_t y)
+{
+    sdc_alg_info ai;
+    sdc_alg_get_info(alg, &ai);
+    uint8_t *pk = malloc(ai.pk_len), *sk = malloc(ai.sk_len), *s = malloc(ai.sig_len);
+    size_t pkl = ai.pk_len, skl = ai.sk_len, sl = ai.sig_len;
+
+    CHECK_ST(sdc_sig_keypair(ctxs[x], alg, pk, &pkl, sk, &skl), SDC_OK,
+             "%s keypair %s", sdc_alg_name(alg), names[x]);
+    /* X's keys: sign with Y, verify with X (secret-key format interop) */
+    CHECK_ST(sdc_sign(ctxs[y], alg, sk, skl, msg, sizeof msg, s, &sl), SDC_OK,
+             "%s sign %s with %s key", sdc_alg_name(alg), names[y], names[x]);
+    CHECK_ST(sdc_verify(ctxs[x], alg, pk, pkl, msg, sizeof msg, s, sl), SDC_OK,
+             "%s %s verifies %s sig", sdc_alg_name(alg), names[x], names[y]);
+    /* sign with X, verify with Y (public-key + signature format interop) */
+    sl = ai.sig_len;
+    CHECK_ST(sdc_sign(ctxs[x], alg, sk, skl, msg, sizeof msg, s, &sl), SDC_OK,
+             "%s sign %s", sdc_alg_name(alg), names[x]);
+    CHECK_ST(sdc_verify(ctxs[y], alg, pk, pkl, msg, sizeof msg, s, sl), SDC_OK,
+             "%s %s verifies %s sig", sdc_alg_name(alg), names[y], names[x]);
+    s[sl / 2] ^= 0x01;
+    CHECK_ST(sdc_verify(ctxs[y], alg, pk, pkl, msg, sizeof msg, s, sl), SDC_ERR_VERIFY_FAILED,
+             "%s %s tampered sig from %s", sdc_alg_name(alg), names[y], names[x]);
+    free(pk); free(sk); free(s);
+}
+
 int main(void)
 {
     sdc_init();
@@ -87,6 +113,7 @@ int main(void)
                 case SDC_FAMILY_AEAD: aead(alg, x, y); break;
                 case SDC_FAMILY_HASH: digest(alg, x, y); break;
                 case SDC_FAMILY_KDF:  kdf(alg, x, y); break;
+                case SDC_FAMILY_SIG:  sig(alg, x, y); break;
                 default: break;
                 }
             }
