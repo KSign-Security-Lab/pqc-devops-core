@@ -235,13 +235,12 @@ static sdc_status ossl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
             EVP_PKEY_get_raw_private_key(pkey, sk, &sl) == 1 && pl == 32 && sl == 32)
             st = SDC_OK;
     } else {
+        /* Export only the scalar and recompute the point: OpenSSL 3.0.x
+         * returns a zero length for the OSSL_PKEY_PARAM_PUB_KEY query. */
         BIGNUM *d = NULL;
-        size_t pl = 0;
         pkey = EVP_PKEY_Q_keygen(NULL, NULL, "EC", "P-256");
         if (pkey && EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, &d) == 1 &&
-            BN_bn2binpad(d, sk, 32) == 32 &&
-            EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY,
-                                            pk, 65, &pl) == 1 && pl == 65)
+            BN_bn2binpad(d, sk, 32) == 32 && ec_pub_from_priv(sk, pk))
             st = SDC_OK;
         BN_clear_free(d);
     }
