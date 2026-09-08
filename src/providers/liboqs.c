@@ -47,10 +47,51 @@ static sdc_status oqs_random(uint8_t *buf, size_t len)
     return SDC_OK;
 }
 
+static sdc_status rc(OQS_STATUS s) { return s == OQS_SUCCESS ? SDC_OK : SDC_ERR_PROVIDER; }
+
+/* -------------------------------------------------------------------- KEM */
+
+static sdc_status oqs_kem_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    OQS_KEM *k = OQS_KEM_new(kem_name(alg));
+    if (!k)
+        return SDC_ERR_PROVIDER;
+    sdc_status st = rc(OQS_KEM_keypair(k, pk, sk));
+    OQS_KEM_free(k);
+    return st;
+}
+
+static sdc_status oqs_kem_encaps(sdc_alg alg, const uint8_t *pk,
+                                 uint8_t *ct, uint8_t *ss)
+{
+    OQS_KEM *k = OQS_KEM_new(kem_name(alg));
+    if (!k)
+        return SDC_ERR_PROVIDER;
+    sdc_status st = rc(OQS_KEM_encaps(k, ct, ss, pk));
+    OQS_KEM_free(k);
+    return st;
+}
+
+/* ML-KEM decapsulation uses implicit rejection: a tampered ciphertext yields
+ * a pseudorandom shared secret rather than an error. */
+static sdc_status oqs_kem_decaps(sdc_alg alg, const uint8_t *sk,
+                                 const uint8_t *ct, uint8_t *ss)
+{
+    OQS_KEM *k = OQS_KEM_new(kem_name(alg));
+    if (!k)
+        return SDC_ERR_PROVIDER;
+    sdc_status st = rc(OQS_KEM_decaps(k, ss, ct, sk));
+    OQS_KEM_free(k);
+    return st;
+}
+
 const sdc_provider sdc_provider_liboqs = {
-    .name     = "liboqs",
-    .init     = oqs_init,
-    .cleanup  = oqs_cleanup,
-    .supports = oqs_supports,
-    .random   = oqs_random,
+    .name        = "liboqs",
+    .init        = oqs_init,
+    .cleanup     = oqs_cleanup,
+    .supports    = oqs_supports,
+    .random      = oqs_random,
+    .kem_keypair = oqs_kem_keypair,
+    .kem_encaps  = oqs_kem_encaps,
+    .kem_decaps  = oqs_kem_decaps,
 };
