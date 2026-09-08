@@ -85,6 +85,44 @@ static sdc_status oqs_kem_decaps(sdc_alg alg, const uint8_t *sk,
     return st;
 }
 
+/* ------------------------------------------------------------- signatures */
+
+static sdc_status oqs_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    OQS_SIG *s = OQS_SIG_new(sig_name(alg));
+    if (!s)
+        return SDC_ERR_PROVIDER;
+    sdc_status st = rc(OQS_SIG_keypair(s, pk, sk));
+    OQS_SIG_free(s);
+    return st;
+}
+
+static sdc_status oqs_sign(sdc_alg alg, const uint8_t *sk,
+                           const uint8_t *msg, size_t msg_len,
+                           uint8_t *sig, size_t *sig_len)
+{
+    static const uint8_t empty[1];
+    OQS_SIG *s = OQS_SIG_new(sig_name(alg));
+    if (!s)
+        return SDC_ERR_PROVIDER;
+    sdc_status st = rc(OQS_SIG_sign(s, sig, sig_len, msg ? msg : empty, msg_len, sk));
+    OQS_SIG_free(s);
+    return st;
+}
+
+static sdc_status oqs_verify(sdc_alg alg, const uint8_t *pk,
+                             const uint8_t *msg, size_t msg_len,
+                             const uint8_t *sig, size_t sig_len)
+{
+    static const uint8_t empty[1];
+    OQS_SIG *s = OQS_SIG_new(sig_name(alg));
+    if (!s)
+        return SDC_ERR_PROVIDER;
+    OQS_STATUS r = OQS_SIG_verify(s, msg ? msg : empty, msg_len, sig, sig_len, pk);
+    OQS_SIG_free(s);
+    return r == OQS_SUCCESS ? SDC_OK : SDC_ERR_VERIFY_FAILED;
+}
+
 const sdc_provider sdc_provider_liboqs = {
     .name        = "liboqs",
     .init        = oqs_init,
@@ -94,4 +132,7 @@ const sdc_provider sdc_provider_liboqs = {
     .kem_keypair = oqs_kem_keypair,
     .kem_encaps  = oqs_kem_encaps,
     .kem_decaps  = oqs_kem_decaps,
+    .sig_keypair = oqs_sig_keypair,
+    .sign        = oqs_sign,
+    .verify      = oqs_verify,
 };
