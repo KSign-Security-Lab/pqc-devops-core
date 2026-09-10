@@ -22,3 +22,7 @@ FetchContent_Declare(liboqs
 FetchContent_MakeAvailable(liboqs)
 
 set(BUILD_SHARED_LIBS ${_sdc_saved_shared})
+
+# liboqs generates its public headers into the build tree but does not
+# attach that directory to the `oqs` target's build interface.
+target_include_directories(oqs INTERFACE $<BUILD_INTERFACE:${liboqs_BINARY_DIR}/include>)
