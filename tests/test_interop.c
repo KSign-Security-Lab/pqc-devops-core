@@ -83,6 +83,31 @@ static void sig(sdc_alg alg, size_t x, size_t y)
     free(pk); free(sk); free(s);
 }
 
+static void kem(sdc_alg alg, size_t x, size_t y)
+{
+    sdc_alg_info ai;
+    sdc_alg_get_info(alg, &ai);
+    uint8_t *pk = malloc(ai.pk_len), *sk = malloc(ai.sk_len), *ct = malloc(ai.ct_len);
+    uint8_t ss1[64], ss2[64];
+    size_t pkl = ai.pk_len, skl = ai.sk_len, cl = ai.ct_len, s1 = sizeof ss1, s2 = sizeof ss2;
+
+    CHECK_ST(sdc_kem_keypair(ctxs[x], alg, pk, &pkl, sk, &skl), SDC_OK,
+             "%s keypair %s", sdc_alg_name(alg), names[x]);
+    CHECK_ST(sdc_kem_encaps(ctxs[y], alg, pk, pkl, ct, &cl, ss1, &s1), SDC_OK,
+             "%s encaps %s", sdc_alg_name(alg), names[y]);
+    CHECK_ST(sdc_kem_decaps(ctxs[x], alg, sk, skl, ct, cl, ss2, &s2), SDC_OK,
+             "%s decaps %s", sdc_alg_name(alg), names[x]);
+    CHECK(s1 == ai.ss_len && s2 == s1 && memcmp(ss1, ss2, s1) == 0,
+          "%s shared secrets differ", sdc_alg_name(alg));
+    /* implicit rejection: tampered ct -> different secret, no error */
+    ct[0] ^= 1;
+    s2 = sizeof ss2;
+    CHECK_ST(sdc_kem_decaps(ctxs[x], alg, sk, skl, ct, cl, ss2, &s2), SDC_OK,
+             "%s decaps tampered", sdc_alg_name(alg));
+    CHECK(memcmp(ss1, ss2, s1) != 0, "%s tampered ct gave same secret", sdc_alg_name(alg));
+    free(pk); free(sk); free(ct);
+}
+
 int main(void)
 {
     sdc_init();
@@ -114,6 +139,7 @@ int main(void)
                 case SDC_FAMILY_HASH: digest(alg, x, y); break;
                 case SDC_FAMILY_KDF:  kdf(alg, x, y); break;
                 case SDC_FAMILY_SIG:  sig(alg, x, y); break;
+                case SDC_FAMILY_KEM:  kem(alg, x, y); break;
                 default: break;
                 }
             }
