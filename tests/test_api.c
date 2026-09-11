@@ -82,16 +82,23 @@ static void test_validation(void)
              "%s", "hash small");
     CHECK(n == 32, "hash size %zu", n);
 
-    CHECK_ST(sdc_hkdf(NULL, SDC_ALG_HKDF_SHA256, pt, 4, NULL, 0, NULL, 0, buf, 0),
-             SDC_ERR_INVALID_ARG, "%s", "hkdf len 0");
-    CHECK_ST(sdc_hkdf(NULL, SDC_ALG_HKDF_SHA256, pt, 4, NULL, 0, NULL, 0, buf, 255 * 32 + 1),
-             SDC_ERR_INVALID_ARG, "%s", "hkdf too long");
+    if (sdc_ctx_provider_for(NULL, SDC_ALG_HKDF_SHA256)) {
+        CHECK_ST(sdc_hkdf(NULL, SDC_ALG_HKDF_SHA256, pt, 4, NULL, 0, NULL, 0, buf, 0),
+                 SDC_ERR_INVALID_ARG, "%s", "hkdf len 0");
+        CHECK_ST(sdc_hkdf(NULL, SDC_ALG_HKDF_SHA256, pt, 4, NULL, 0, NULL, 0, buf, 255 * 32 + 1),
+                 SDC_ERR_INVALID_ARG, "%s", "hkdf too long");
+    } else {
+        CHECK_ST(sdc_hkdf(NULL, SDC_ALG_HKDF_SHA256, pt, 4, NULL, 0, NULL, 0, buf, 32),
+                 SDC_ERR_NO_PROVIDER, "%s", "hkdf without provider");
+    }
 
-    uint8_t pk[65], sk[32];
-    size_t pkl = 10, skl = 10;
-    CHECK_ST(sdc_sig_keypair(NULL, SDC_ALG_ED25519, pk, &pkl, sk, &skl),
-             SDC_ERR_BUFFER_TOO_SMALL, "%s", "keypair small");
-    CHECK(pkl == 32 && skl == 32, "keypair sizes %zu %zu", pkl, skl);
+    if (sdc_ctx_provider_for(NULL, SDC_ALG_ED25519)) {
+        uint8_t pk[65], sk[32];
+        size_t pkl = 10, skl = 10;
+        CHECK_ST(sdc_sig_keypair(NULL, SDC_ALG_ED25519, pk, &pkl, sk, &skl),
+                 SDC_ERR_BUFFER_TOO_SMALL, "%s", "keypair small");
+        CHECK(pkl == 32 && skl == 32, "keypair sizes %zu %zu", pkl, skl);
+    }
 
     CHECK_ST(sdc_random(NULL, buf, 0), SDC_OK, "%s", "random 0");
     CHECK_ST(sdc_random(NULL, buf, sizeof(buf)), SDC_OK, "%s", "random");
