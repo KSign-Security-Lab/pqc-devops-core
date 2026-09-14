@@ -4,7 +4,7 @@
 
 #include "internal/provider.h"
 
-/*                 alg                          name                 family            key non tag dig   pk    sk   sig   ct  ss */
+/* Columns: key, nonce, tag, digest, pk, sk, sig (max), kem ct, shared secret (bytes). */
 #define A(alg, name, fam, k, n, t, d, pk, sk, sig, ct, ss) \
     [alg] = { alg, name, fam, k, n, t, d, pk, sk, sig, ct, ss }
 
