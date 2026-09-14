@@ -119,6 +119,11 @@ set_target_properties(sdc_static PROPERTIES OUTPUT_NAME sdc)
 add_library(sdc::sdc ALIAS sdc)
 add_library(sdc::sdc_static ALIAS sdc_static)
 
+install(TARGETS sdc sdc_static
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES include/sdc/sdc.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sdc)
+
 # --- tests & examples ------------------------------------------------------------
 if(BUILD_TESTING)
   add_subdirectory(tests)
