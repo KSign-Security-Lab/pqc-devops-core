@@ -7,4 +7,5 @@ Description: Crypto-Agility SDK - one C API over multiple crypto libraries
 Version: @PROJECT_VERSION@
 Requires.private:@SDC_PC_REQUIRES@
 Libs: -L${libdir} -lsdc
+Libs.private: @SDC_PC_LIBS_PRIVATE@
 Cflags: -I${includedir}
