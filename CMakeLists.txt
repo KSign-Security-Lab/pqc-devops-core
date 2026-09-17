@@ -43,8 +43,10 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(sdc_objs PRIVATE -Werror)
   endif()
 endif()
+
 set(SDC_LINK_LIBS Threads::Threads)
 set(SDC_PC_REQUIRES "")
+set(SDC_PC_LIBS_PRIVATE "-lpthread")
 set(SDC_PROVIDERS "")
 
 # --- OpenSSL -----------------------------------------------------------------
@@ -67,6 +69,7 @@ if(SDC_WITH_NETTLE)
   target_link_libraries(sdc_objs PRIVATE PkgConfig::NETTLE)
   list(APPEND SDC_LINK_LIBS PkgConfig::NETTLE ${GMP_LIBRARY})
   string(APPEND SDC_PC_REQUIRES " nettle hogweed")
+  string(APPEND SDC_PC_LIBS_PRIVATE " -lgmp")
   list(APPEND SDC_PROVIDERS nettle)
 endif()
 
@@ -96,6 +99,7 @@ if(SDC_WITH_LIBOQS)
   target_compile_definitions(sdc_objs PRIVATE SDC_HAVE_LIBOQS)
   target_link_libraries(sdc_objs PRIVATE ${SDC_OQS_TARGET})
   list(APPEND SDC_LINK_LIBS ${SDC_OQS_TARGET})
+  string(APPEND SDC_PC_LIBS_PRIVATE " -loqs")
   list(APPEND SDC_PROVIDERS liboqs)
 endif()
 
