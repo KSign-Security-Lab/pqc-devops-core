@@ -123,6 +123,8 @@ install(TARGETS sdc sdc_static
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES include/sdc/sdc.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sdc)
+configure_file(cmake/sdc.pc.in ${PROJECT_BINARY_DIR}/sdc.pc @ONLY)
+install(FILES ${PROJECT_BINARY_DIR}/sdc.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 # --- tests & examples ------------------------------------------------------------
 if(BUILD_TESTING)
