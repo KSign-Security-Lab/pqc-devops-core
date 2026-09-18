@@ -199,6 +199,17 @@ SDC_API sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
 /* Zero memory in a way the compiler will not optimise away. */
 SDC_API void sdc_memzero(void *p, size_t len);
 
+/* ------------------------------------------------------------- encoding */
+
+/* Lower-case hex. out needs 2*in_len + 1 bytes (NUL-terminated);
+ * *out_len receives the string length without the NUL. */
+SDC_API sdc_status sdc_hex_encode(const uint8_t *in, size_t in_len,
+                                  char *out, size_t *out_len);
+/* Accepts upper/lower case; odd length or non-hex characters are
+ * SDC_ERR_INVALID_ARG. out needs in_len / 2 bytes. */
+SDC_API sdc_status sdc_hex_decode(const char *in, size_t in_len,
+                                  uint8_t *out, size_t *out_len);
+
 #ifdef __cplusplus
 }
 #endif
