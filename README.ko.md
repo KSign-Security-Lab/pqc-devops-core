@@ -10,7 +10,7 @@
 
 **DevOps 기반 양자내성암호(PQC) 전환을 위한 핵심 구현 저장소입니다.** Crypto-Agility SDK, 레거시-SDC API 전환 템플릿, C/Java 스니핏, PIU 지식베이스를 개발하는 것을 목표로 합니다.
 
-> **프로젝트 단계:** 초기 구현 작업을 Issue로 관리하고 있습니다. 현재 저장소에는 **실행 가능한 SDK나 배포된 패키지가 아직 없습니다.**
+> **프로젝트 단계:** 초기 구현 작업을 Issue로 관리하고 있습니다. **Crypto-Agility SDK의 첫 C 프로토타입**이 포함되어 있습니다([아래](#crypto-agility-sdk-c--프로토타입) 참고). 나머지 컴포넌트는 계획 단계이며 배포된 패키지는 아직 없습니다.
 
 <p align="center">
   <a href="#목표-아키텍처">아키텍처</a> ·
@@ -49,6 +49,46 @@ PQC 전환 과정에서 애플리케이션이 특정 암호 라이브러리에 �
 
 위 항목은 **개발 예정 산출물**입니다. 세부 범위와 완료 조건은 각 Issue를 기준으로 관리합니다.
 
+## Crypto-Agility SDK (C) — 프로토타입
+
+`libsdc`는 AEAD, 해시, HKDF, 전자서명, KEM을 위한 **단일 C API**(`include/sdc/sdc.h`)를 제공합니다. 애플리케이션은 *알고리즘*만 지정하고, 실제 연산을 수행할 라이브러리는 Provider 레지스트리가 선택합니다.
+
+| 알고리즘 | OpenSSL 3 | Nettle | libgcrypt | liboqs |
+|:--|:-:|:-:|:-:|:-:|
+| AES-256-GCM, ChaCha20-Poly1305 | ✓ | ✓ | ✓ | |
+| SHA-256/384/512, SHA3-256/512 | ✓ | ✓ | ✓ | |
+| HKDF-SHA256/512 | ✓ | ✓ | | |
+| Ed25519, ECDSA-P256-SHA256 | ✓ | ✓ | ✓ | |
+| ML-KEM-512/768/1024, ML-DSA-44/65/87 | | | | ✓ |
+
+**빌드 및 테스트** (CMake 3.16 이상, OpenSSL 3.0 이상, Nettle/Hogweed + GMP, libgcrypt 개발 패키지 필요. liboqs는 설치되어 있지 않으면 자동으로 내려받습니다):
+
+```bash
+cmake -S . -B build
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+`-DSDC_WITH_OPENSSL|NETTLE|GCRYPT|LIBOQS=OFF`로 백엔드를 끌 수 있고, `-DSDC_SANITIZE=ON`으로 Sanitizer 빌드를 할 수 있습니다.
+
+**사용 예**
+
+```c
+#include <sdc/sdc.h>
+
+sdc_ctx *ctx;
+sdc_ctx_new(&ctx, NULL);               /* 기본 순서, 또는 "nettle,openssl" */
+
+uint8_t out[sizeof msg + 16];
+size_t out_len = sizeof out;
+sdc_status st = sdc_aead_encrypt(ctx, SDC_ALG_AES_256_GCM, key, 32, nonce, 12,
+                                 aad, aad_len, msg, sizeof msg, out, &out_len);
+printf("served by %s\n", sdc_ctx_provider_for(ctx, SDC_ALG_AES_256_GCM));
+sdc_ctx_free(ctx);
+```
+
+재컴파일 없이 백엔드 전환: `SDC_PROVIDER=gcrypt ./build/examples/sdc_demo`. 키와 서명은 Provider와 무관한 표준 인코딩(`sdc.h`에 명시)을 사용하므로 한 Provider로 생성한 키를 다른 Provider에서도 쓸 수 있으며, 교차 Provider 테스트(`tests/test_interop.c`)가 이를 검증합니다.
+
 ## 구현 원칙
 
 | 원칙 | 설계 방향 |
@@ -68,7 +108,7 @@ git clone https://github.com/KSign-Security-Lab/pqc-devops-core.git
 cd pqc-devops-core
 ```
 
-현재는 설치·빌드·실행 명령이 없습니다. SDK 프로토타입이 공개되기 전에는 **[구현 Issue](https://github.com/KSign-Security-Lab/pqc-devops-core/issues)**를 기준으로 작업합니다.
+SDK 프로토타입 빌드 방법은 [Crypto-Agility SDK (C)](#crypto-agility-sdk-c--프로토타입)를 참고하세요. 그 외 작업은 **[구현 Issue](https://github.com/KSign-Security-Lab/pqc-devops-core/issues)**를 기준으로 진행합니다.
 
 **작업 흐름**
 
