@@ -210,6 +210,15 @@ SDC_API sdc_status sdc_hex_encode(const uint8_t *in, size_t in_len,
 SDC_API sdc_status sdc_hex_decode(const char *in, size_t in_len,
                                   uint8_t *out, size_t *out_len);
 
+/* Standard base64 (RFC 4648) with padding. out needs
+ * 4 * ceil(in_len / 3) + 1 bytes (NUL-terminated). */
+SDC_API sdc_status sdc_base64_encode(const uint8_t *in, size_t in_len,
+                                     char *out, size_t *out_len);
+/* Strict: requires canonical padding, rejects whitespace and invalid
+ * characters. out needs 3 * (in_len / 4) bytes. */
+SDC_API sdc_status sdc_base64_decode(const char *in, size_t in_len,
+                                     uint8_t *out, size_t *out_len);
+
 #ifdef __cplusplus
 }
 #endif
