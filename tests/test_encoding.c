@@ -27,8 +27,33 @@ static void test_hex(void)
     CHECK(n == 2, "need %zu", n);
 }
 
+static void test_base64(void)
+{
+    /* RFC 4648 section 10 */
+    static const char *const v[][2] = {
+        {"", ""}, {"f", "Zg=="}, {"fo", "Zm8="}, {"foo", "Zm9v"},
+        {"foob", "Zm9vYg=="}, {"fooba", "Zm9vYmE="}, {"foobar", "Zm9vYmFy"},
+    };
+    for (size_t i = 0; i < sizeof v / sizeof v[0]; i++) {
+        char s[16];
+        uint8_t b[16];
+        size_t n = sizeof s, m = sizeof b, l = strlen(v[i][0]);
+        CHECK_ST(sdc_base64_encode((const uint8_t *)v[i][0], l, s, &n), SDC_OK, "enc %s", v[i][0]);
+        CHECK(strcmp(s, v[i][1]) == 0, "enc %s -> %s", v[i][0], s);
+        CHECK_ST(sdc_base64_decode(v[i][1], strlen(v[i][1]), b, &m), SDC_OK, "dec %s", v[i][1]);
+        CHECK(m == l && memcmp(b, v[i][0], l) == 0, "dec %s", v[i][1]);
+    }
+    uint8_t b[16];
+    size_t m = sizeof b;
+    CHECK_ST(sdc_base64_decode("Zg=", 3, b, &m), SDC_ERR_INVALID_ARG, "%s", "bad length");
+    CHECK_ST(sdc_base64_decode("Zh==", 4, b, &m), SDC_ERR_INVALID_ARG, "%s", "non-canonical");
+    CHECK_ST(sdc_base64_decode("Zm9!", 4, b, &m), SDC_ERR_INVALID_ARG, "%s", "bad char");
+    CHECK_ST(sdc_base64_decode("Zg==Zg==", 8, b, &m), SDC_ERR_INVALID_ARG, "%s", "pad mid-string");
+}
+
 int main(void)
 {
     test_hex();
+    test_base64();
     return test_summary("test_encoding");
 }
