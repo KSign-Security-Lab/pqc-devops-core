@@ -198,6 +198,9 @@ SDC_API sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
 
 /* Zero memory in a way the compiler will not optimise away. */
 SDC_API void sdc_memzero(void *p, size_t len);
+/* Constant-time comparison: 1 if equal, 0 otherwise. Timing depends only
+ * on len. */
+SDC_API int sdc_ct_equal(const void *a, const void *b, size_t len);
 
 /* ------------------------------------------------------------- encoding */
 
