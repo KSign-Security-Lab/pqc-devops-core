@@ -51,9 +51,24 @@ static void test_base64(void)
     CHECK_ST(sdc_base64_decode("Zg==Zg==", 8, b, &m), SDC_ERR_INVALID_ARG, "%s", "pad mid-string");
 }
 
+static void test_ct_equal(void)
+{
+    uint8_t a[33], b[33];
+    for (size_t i = 0; i < sizeof a; i++)
+        a[i] = b[i] = (uint8_t)i;
+    CHECK(sdc_ct_equal(a, b, sizeof a) == 1, "%s", "equal");
+    CHECK(sdc_ct_equal(a, b, 0) == 1, "%s", "empty");
+    for (size_t i = 0; i < sizeof a; i++) {
+        b[i] ^= 0x80;
+        CHECK(sdc_ct_equal(a, b, sizeof a) == 0, "differ at %zu", i);
+        b[i] ^= 0x80;
+    }
+}
+
 int main(void)
 {
     test_hex();
     test_base64();
+    test_ct_equal();
     return test_summary("test_encoding");
 }
