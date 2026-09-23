@@ -38,6 +38,15 @@ void sdc_memzero(void *p, size_t len)
         *v++ = 0;
 }
 
+int sdc_ct_equal(const void *a, const void *b, size_t len)
+{
+    const volatile uint8_t *x = a, *y = b;
+    uint8_t d = 0;
+    for (size_t i = 0; i < len; i++)
+        d |= x[i] ^ y[i];
+    return (1 & ((d - 1) >> 8));
+}
+
 /* ----------------------------------------------------------------- contexts */
 
 static sdc_status parse_pref(sdc_ctx *c, const char *pref)
