@@ -82,3 +82,16 @@ const char *sdc_family_name(sdc_family family)
     default:              return NULL;
     }
 }
+
+size_t sdc_alg_list(sdc_family family, sdc_alg *out, size_t cap)
+{
+    size_t n = 0;
+    for (int i = SDC_ALG_NONE + 1; i < SDC_ALG__COUNT; i++) {
+        if (family != SDC_FAMILY_NONE && g_algs[i].family != family)
+            continue;
+        if (out && n < cap)
+            out[n] = (sdc_alg)i;
+        n++;
+    }
+    return n;
+}
