@@ -18,6 +18,31 @@ static void test_alg_table(void)
     CHECK(sdc_alg_get_info(SDC_ALG_NONE, &ai) == SDC_ERR_UNSUPPORTED, "NONE");
 }
 
+static void test_enumeration(void)
+{
+    sdc_alg all[SDC_ALG__COUNT];
+    size_t total = sdc_alg_list(SDC_FAMILY_NONE, NULL, 0);
+    CHECK(total == SDC_ALG__COUNT - 1, "total %zu", total);
+    CHECK(sdc_alg_list(SDC_FAMILY_NONE, all, SDC_ALG__COUNT) == total, "%s", "fill");
+    size_t sum = 0;
+    for (int f = SDC_FAMILY_AEAD; f <= SDC_FAMILY_KEM; f++) {
+        sdc_alg buf[SDC_ALG__COUNT];
+        size_t n = sdc_alg_list((sdc_family)f, buf, SDC_ALG__COUNT);
+        CHECK(sdc_family_name((sdc_family)f) != NULL, "family %d named", f);
+        for (size_t i = 0; i < n; i++) {
+            sdc_alg_info ai;
+            sdc_alg_get_info(buf[i], &ai);
+            CHECK(ai.family == (sdc_family)f, "%s in %s", ai.name, sdc_family_name(f));
+        }
+        sum += n;
+    }
+    CHECK(sum == total, "families cover all algorithms (%zu/%zu)", sum, total);
+    sdc_alg one;
+    CHECK(sdc_alg_list(SDC_FAMILY_NONE, &one, 1) == total && one == SDC_ALG_NONE + 1,
+          "%s", "truncated listing");
+    CHECK(sdc_family_name(SDC_FAMILY_NONE) == NULL, "%s", "NONE has no name");
+}
+
 static void test_contexts(void)
 {
     sdc_ctx *c = NULL;
@@ -108,6 +133,7 @@ int main(void)
 {
     CHECK_ST(sdc_init(), SDC_OK, "%s", "init");
     test_alg_table();
+    test_enumeration();
     test_contexts();
     test_validation();
     sdc_cleanup();
