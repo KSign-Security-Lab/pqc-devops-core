@@ -44,7 +44,7 @@ int sdc_ct_equal(const void *a, const void *b, size_t len)
     uint8_t d = 0;
     for (size_t i = 0; i < len; i++)
         d |= x[i] ^ y[i];
-    return (1 & ((d - 1) >> 8));
+    return (int)(1u & (((unsigned)d - 1u) >> 8));
 }
 
 /* ----------------------------------------------------------------- contexts */
