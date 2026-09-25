@@ -118,6 +118,11 @@ typedef struct sdc_alg_info {
 SDC_API sdc_alg     sdc_alg_from_name(const char *name);
 SDC_API const char *sdc_alg_name(sdc_alg alg);
 SDC_API sdc_status  sdc_alg_get_info(sdc_alg alg, sdc_alg_info *info);
+/* "AEAD", "HASH", ... or NULL for an unknown family. */
+SDC_API const char *sdc_family_name(sdc_family family);
+/* Write up to `cap` algorithm ids of `family` (SDC_FAMILY_NONE = all) into
+ * out; returns the total number available. Call with cap = 0 to count. */
+SDC_API size_t      sdc_alg_list(sdc_family family, sdc_alg *out, size_t cap);
 
 /* --------------------------------------------------- providers & contexts */
 

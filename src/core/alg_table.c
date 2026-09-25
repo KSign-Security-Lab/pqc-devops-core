@@ -70,3 +70,15 @@ sdc_alg sdc_alg_from_name(const char *name)
             return (sdc_alg)i;
     return SDC_ALG_NONE;
 }
+
+const char *sdc_family_name(sdc_family family)
+{
+    switch (family) {
+    case SDC_FAMILY_AEAD: return "AEAD";
+    case SDC_FAMILY_HASH: return "HASH";
+    case SDC_FAMILY_KDF:  return "KDF";
+    case SDC_FAMILY_SIG:  return "SIG";
+    case SDC_FAMILY_KEM:  return "KEM";
+    default:              return NULL;
+    }
+}
