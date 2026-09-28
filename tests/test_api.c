@@ -55,6 +55,20 @@ static void test_contexts(void)
     CHECK_ST(sdc_ctx_new(&c, " , "), SDC_ERR_INVALID_ARG, "%s", "empty list");
     CHECK_ST(sdc_ctx_new(NULL, NULL), SDC_ERR_INVALID_ARG, "%s", "NULL out");
 
+    if (sdc_provider_count() >= 2) {
+        char pref[64];
+        const char *a = sdc_provider_name(0), *b = sdc_provider_name(1);
+        snprintf(pref, sizeof pref, "%s, %s,%s", b, a, b);
+        CHECK_ST(sdc_ctx_new(&c, pref), SDC_OK, "%s", pref);
+        CHECK(sdc_ctx_provider_count(c) == 2, "duplicates removed: %zu",
+              sdc_ctx_provider_count(c));
+        CHECK(strcmp(sdc_ctx_provider_name(c, 0), b) == 0 &&
+              strcmp(sdc_ctx_provider_name(c, 1), a) == 0, "%s", "order kept");
+        CHECK(sdc_ctx_provider_name(c, 2) == NULL, "%s", "out of range");
+        sdc_ctx_free(c);
+    }
+    CHECK(sdc_ctx_provider_count(NULL) == sdc_provider_count(), "%s", "default ctx");
+
     const char *first = sdc_provider_name(0);
     CHECK_ST(sdc_ctx_new(&c, first), SDC_OK, "%s", first);
     for (int a = SDC_ALG_NONE + 1; a < SDC_ALG__COUNT; a++) {
