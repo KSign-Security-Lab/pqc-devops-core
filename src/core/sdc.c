@@ -132,6 +132,19 @@ static const sdc_provider *pick(const sdc_ctx *ctx, sdc_alg alg)
     return NULL;
 }
 
+size_t sdc_ctx_provider_count(const sdc_ctx *ctx)
+{
+    sdc_ctx tmp;
+    return resolve_ctx(ctx, &tmp)->n;
+}
+
+const char *sdc_ctx_provider_name(const sdc_ctx *ctx, size_t index)
+{
+    sdc_ctx tmp;
+    ctx = resolve_ctx(ctx, &tmp);
+    return index < ctx->n ? ctx->order[index]->name : NULL;
+}
+
 const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
 {
     if (!sdc__alg_info(alg))

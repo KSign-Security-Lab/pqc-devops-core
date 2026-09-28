@@ -143,6 +143,9 @@ typedef struct sdc_ctx sdc_ctx;
  * as "nettle,openssl". Only listed providers are used. */
 SDC_API sdc_status  sdc_ctx_new(sdc_ctx **ctx, const char *provider_pref);
 SDC_API void        sdc_ctx_free(sdc_ctx *ctx);
+/* Providers in this context, in preference order. */
+SDC_API size_t      sdc_ctx_provider_count(const sdc_ctx *ctx);
+SDC_API const char *sdc_ctx_provider_name(const sdc_ctx *ctx, size_t index);
 /* Name of the provider that would serve `alg`, or NULL. */
 SDC_API const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg);
 
