@@ -1,4 +1,5 @@
 /* Public API: contexts, validation and dispatch. SPDX-License-Identifier: Apache-2.0 */
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -122,12 +123,28 @@ static const sdc_ctx *resolve_ctx(const sdc_ctx *ctx, sdc_ctx *tmp)
     return tmp;
 }
 
-static const sdc_provider *pick(const sdc_ctx *ctx, sdc_alg alg)
+#define NO_OP ((size_t)-1)
+#define OP(field) offsetof(sdc_provider, field)
+
+/* True if provider p implements the vtable entry at offset `op`. */
+static int has_op(const sdc_provider *p, size_t op)
+{
+    void (*fn)(void);
+    if (op == NO_OP)
+        return 1;
+    memcpy(&fn, (const char *)p + op, sizeof(fn));
+    return fn != NULL;
+}
+
+/* First provider in the context that supports `alg` and implements `op`.
+ * Choosing per operation lets a provider implement only part of an
+ * algorithm (e.g. verify but not keygen) and fall through to the next. */
+static const sdc_provider *pick(const sdc_ctx *ctx, sdc_alg alg, size_t op)
 {
     sdc_ctx tmp;
     ctx = resolve_ctx(ctx, &tmp);
     for (size_t i = 0; i < ctx->n; i++)
-        if (ctx->order[i]->supports(alg))
+        if (ctx->order[i]->supports(alg) && has_op(ctx->order[i], op))
             return ctx->order[i];
     return NULL;
 }
@@ -149,7 +166,7 @@ const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
 {
     if (!sdc__alg_info(alg))
         return NULL;
-    const sdc_provider *p = pick(ctx, alg);
+    const sdc_provider *p = pick(ctx, alg, NO_OP);
     return p ? p->name : NULL;
 }
 
@@ -157,14 +174,15 @@ const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
 
 /* Resolve alg info + provider for an operation of the given family. */
 static sdc_status prepare(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
-                          const sdc_alg_info **ai, const sdc_provider **p)
+                          size_t op, const sdc_alg_info **ai,
+                          const sdc_provider **p)
 {
     *ai = sdc__alg_info(alg);
     if (!*ai)
         return SDC_ERR_UNSUPPORTED;
     if ((*ai)->family != fam)
         return SDC_ERR_INVALID_ARG;
-    *p = pick(ctx, alg);
+    *p = pick(ctx, alg, op);
     return *p ? SDC_OK : SDC_ERR_NO_PROVIDER;
 }
 
@@ -192,7 +210,7 @@ sdc_status sdc_random(const sdc_ctx *ctx, uint8_t *buf, size_t len)
     sdc_ctx tmp;
     ctx = resolve_ctx(ctx, &tmp);
     for (size_t i = 0; i < ctx->n; i++)
-        if (ctx->order[i]->random)
+        if (has_op(ctx->order[i], OP(random)))
             return ctx->order[i]->random(buf, len);
     return SDC_ERR_NO_PROVIDER;
 }
@@ -206,7 +224,7 @@ sdc_status sdc_aead_encrypt(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_AEAD, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_AEAD, OP(aead_encrypt), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(key, key_len, ai->key_len);
@@ -235,7 +253,7 @@ sdc_status sdc_aead_decrypt(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_AEAD, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_AEAD, OP(aead_decrypt), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(key, key_len, ai->key_len);
@@ -261,7 +279,7 @@ sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_HASH, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_HASH, OP(hash), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_IN(in, in_len);
@@ -280,7 +298,7 @@ sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KDF, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KDF, OP(hkdf), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_IN(ikm, ikm_len);
@@ -300,7 +318,7 @@ static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, fam, &ai, &p);
+    sdc_status st = prepare(ctx, alg, fam, fam == SDC_FAMILY_SIG ? OP(sig_keypair) : OP(kem_keypair), &ai, &p);
     if (st != SDC_OK)
         return st;
     if (!pk_len || !sk_len)
@@ -337,7 +355,7 @@ sdc_status sdc_sign(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, OP(sign), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(sk, sk_len, ai->sk_len);
@@ -357,7 +375,7 @@ sdc_status sdc_verify(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, OP(verify), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(pk, pk_len, ai->pk_len);
@@ -383,7 +401,7 @@ sdc_status sdc_kem_encaps(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, OP(kem_encaps), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(pk, pk_len, ai->pk_len);
@@ -413,7 +431,7 @@ sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, &ai, &p);
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEM, OP(kem_decaps), &ai, &p);
     if (st != SDC_OK)
         return st;
     CHECK_FIXED(sk, sk_len, ai->sk_len);
