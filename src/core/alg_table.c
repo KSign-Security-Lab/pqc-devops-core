@@ -26,6 +26,7 @@ static const sdc_alg_info g_algs[SDC_ALG__COUNT] = {
     A(SDC_ALG_ML_KEM_512,        "ML-KEM-512",        SDC_FAMILY_KEM,   0,  0,  0,  0,  800, 1632,    0,  768, 32),
     A(SDC_ALG_ML_KEM_768,        "ML-KEM-768",        SDC_FAMILY_KEM,   0,  0,  0,  0, 1184, 2400,    0, 1088, 32),
     A(SDC_ALG_ML_KEM_1024,       "ML-KEM-1024",       SDC_FAMILY_KEM,   0,  0,  0,  0, 1568, 3168,    0, 1568, 32),
+    A(SDC_ALG_AES_128_GCM,       "AES-128-GCM",       SDC_FAMILY_AEAD, 16, 12, 16,  0,    0,    0,    0,    0,  0),
 };
 #undef A
 
