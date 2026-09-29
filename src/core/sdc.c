@@ -318,7 +318,8 @@ static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    sdc_status st = prepare(ctx, alg, fam, fam == SDC_FAMILY_SIG ? OP(sig_keypair) : OP(kem_keypair), &ai, &p);
+    size_t op = fam == SDC_FAMILY_SIG ? OP(sig_keypair) : OP(kem_keypair);
+    sdc_status st = prepare(ctx, alg, fam, op, &ai, &p);
     if (st != SDC_OK)
         return st;
     if (!pk_len || !sk_len)
