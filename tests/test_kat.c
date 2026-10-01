@@ -25,6 +25,21 @@ static const aead_kat AEAD[] = {
       "0000000000000000000000000000000000000000000000000000000000000000",
       "000000000000000000000000", "", "", "",
       "530f8afbc74536b9a963b4f1c4cb738b" },
+    /* GCM spec Test Case 4 (AES-128, AAD, 60-byte plaintext) */
+    { SDC_ALG_AES_128_GCM, "GCM TC4",
+      "feffe9928665731c6d6a8f9467308308",
+      "cafebabefacedbaddecaf888",
+      "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+      "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72"
+      "1c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+      "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e"
+      "21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091",
+      "5bc94fbc3221a5db94fae95ae7121a47" },
+    /* GCM spec Test Case 1 (AES-128, all empty) */
+    { SDC_ALG_AES_128_GCM, "GCM TC1",
+      "00000000000000000000000000000000",
+      "000000000000000000000000", "", "", "",
+      "58e2fccefa7e3061367f1d57a4e7455a" },
     /* RFC 8439 section 2.8.2 */
     { SDC_ALG_CHACHA20_POLY1305, "RFC8439 2.8.2",
       "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
