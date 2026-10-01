@@ -22,6 +22,7 @@ static int ntl_supports(sdc_alg alg)
 {
     switch (alg) {
     case SDC_ALG_AES_256_GCM:
+    case SDC_ALG_AES_128_GCM:
     case SDC_ALG_CHACHA20_POLY1305:
     case SDC_ALG_SHA256:
     case SDC_ALG_SHA384:
@@ -79,6 +80,14 @@ static sdc_status ntl_aead_encrypt(sdc_alg alg, const uint8_t *key,
         gcm_aes256_encrypt(&c, pt_len, ct, pt);
         gcm_aes256_digest(&c, 16, tag);
         sdc_memzero(&c, sizeof(c));
+    } else if (alg == SDC_ALG_AES_128_GCM) {
+        struct gcm_aes128_ctx c;
+        gcm_aes128_set_key(&c, key);
+        gcm_aes128_set_iv(&c, 12, nonce);
+        gcm_aes128_update(&c, aad_len, aad);
+        gcm_aes128_encrypt(&c, pt_len, ct, pt);
+        gcm_aes128_digest(&c, 16, tag);
+        sdc_memzero(&c, sizeof(c));
     } else {
         struct chacha_poly1305_ctx c;
         chacha_poly1305_set_key(&c, key);
@@ -105,6 +114,14 @@ static sdc_status ntl_aead_decrypt(sdc_alg alg, const uint8_t *key,
         gcm_aes256_update(&c, aad_len, aad);
         gcm_aes256_decrypt(&c, ct_len, pt, ct);
         gcm_aes256_digest(&c, 16, calc);
+        sdc_memzero(&c, sizeof(c));
+    } else if (alg == SDC_ALG_AES_128_GCM) {
+        struct gcm_aes128_ctx c;
+        gcm_aes128_set_key(&c, key);
+        gcm_aes128_set_iv(&c, 12, nonce);
+        gcm_aes128_update(&c, aad_len, aad);
+        gcm_aes128_decrypt(&c, ct_len, pt, ct);
+        gcm_aes128_digest(&c, 16, calc);
         sdc_memzero(&c, sizeof(c));
     } else {
         struct chacha_poly1305_ctx c;
