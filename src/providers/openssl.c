@@ -15,6 +15,7 @@ static int ossl_supports(sdc_alg alg)
 {
     switch (alg) {
     case SDC_ALG_AES_256_GCM:
+    case SDC_ALG_AES_128_GCM:
     case SDC_ALG_CHACHA20_POLY1305:
     case SDC_ALG_SHA256:
     case SDC_ALG_SHA384:
@@ -47,7 +48,11 @@ static sdc_status ossl_random(uint8_t *buf, size_t len)
 
 static const EVP_CIPHER *aead_cipher(sdc_alg alg)
 {
-    return alg == SDC_ALG_AES_256_GCM ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
+    switch (alg) {
+    case SDC_ALG_AES_256_GCM: return EVP_aes_256_gcm();
+    case SDC_ALG_AES_128_GCM: return EVP_aes_128_gcm();
+    default:                  return EVP_chacha20_poly1305();
+    }
 }
 
 /* EVP takes int lengths; process in chunks so size_t inputs are safe. */
