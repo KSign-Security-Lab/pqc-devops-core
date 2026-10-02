@@ -18,6 +18,7 @@ static int ossl_supports(sdc_alg alg)
     case SDC_ALG_AES_128_GCM:
     case SDC_ALG_CHACHA20_POLY1305:
     case SDC_ALG_SHA256:
+    case SDC_ALG_SHA224:
     case SDC_ALG_SHA384:
     case SDC_ALG_SHA512:
     case SDC_ALG_SHA3_256:
@@ -126,6 +127,7 @@ static const EVP_MD *md_for(sdc_alg alg)
     case SDC_ALG_SHA256:
     case SDC_ALG_HKDF_SHA256:
     case SDC_ALG_ECDSA_P256_SHA256: return EVP_sha256();
+    case SDC_ALG_SHA224:            return EVP_sha224();
     case SDC_ALG_SHA384:            return EVP_sha384();
     case SDC_ALG_SHA512:
     case SDC_ALG_HKDF_SHA512:       return EVP_sha512();
