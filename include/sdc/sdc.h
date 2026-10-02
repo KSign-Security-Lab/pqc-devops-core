@@ -87,6 +87,7 @@ typedef enum sdc_alg {
     SDC_ALG_ML_KEM_1024,
     /* Added in 0.2 (appended to keep existing values stable) */
     SDC_ALG_AES_128_GCM,
+    SDC_ALG_SHA224,
     SDC_ALG__COUNT
 } sdc_alg;
 
