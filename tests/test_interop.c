@@ -14,14 +14,17 @@ static uint8_t msg[1000];
 static void aead(sdc_alg alg, size_t x, size_t y)
 {
     uint8_t key[32], nonce[12], aad[13], ct[sizeof msg + 16], pt[sizeof msg];
+    sdc_alg_info ai;
+    sdc_alg_get_info(alg, &ai);
+    size_t kl = ai.key_len;
     sdc_random(ctxs[x], key, sizeof key);
     sdc_random(ctxs[x], nonce, sizeof nonce);
     sdc_random(ctxs[x], aad, sizeof aad);
     for (size_t len = 0; len <= sizeof msg; len += 333) {
         size_t n = sizeof ct, m = sizeof pt;
-        CHECK_ST(sdc_aead_encrypt(ctxs[x], alg, key, 32, nonce, 12, aad, sizeof aad,
+        CHECK_ST(sdc_aead_encrypt(ctxs[x], alg, key, kl, nonce, 12, aad, sizeof aad,
                                   msg, len, ct, &n), SDC_OK, "%s enc %s", sdc_alg_name(alg), names[x]);
-        CHECK_ST(sdc_aead_decrypt(ctxs[y], alg, key, 32, nonce, 12, aad, sizeof aad,
+        CHECK_ST(sdc_aead_decrypt(ctxs[y], alg, key, kl, nonce, 12, aad, sizeof aad,
                                   ct, n, pt, &m), SDC_OK, "%s %s->%s len %zu",
                  sdc_alg_name(alg), names[x], names[y], len);
         CHECK(m == len && memcmp(pt, msg, len) == 0, "%s %s->%s plaintext",
@@ -29,7 +32,7 @@ static void aead(sdc_alg alg, size_t x, size_t y)
         if (len) {
             ct[0] ^= 0x80;
             m = sizeof pt;
-            CHECK_ST(sdc_aead_decrypt(ctxs[y], alg, key, 32, nonce, 12, aad, sizeof aad,
+            CHECK_ST(sdc_aead_decrypt(ctxs[y], alg, key, kl, nonce, 12, aad, sizeof aad,
                                       ct, n, pt, &m), SDC_ERR_AUTH_FAILED,
                      "%s %s->%s tampered ct", sdc_alg_name(alg), names[x], names[y]);
             uint8_t zero[sizeof msg] = {0};
