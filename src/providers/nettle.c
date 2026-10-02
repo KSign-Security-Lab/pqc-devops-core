@@ -25,6 +25,7 @@ static int ntl_supports(sdc_alg alg)
     case SDC_ALG_AES_128_GCM:
     case SDC_ALG_CHACHA20_POLY1305:
     case SDC_ALG_SHA256:
+    case SDC_ALG_SHA224:
     case SDC_ALG_SHA384:
     case SDC_ALG_SHA512:
     case SDC_ALG_SHA3_256:
@@ -144,6 +145,11 @@ static sdc_status ntl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
     case SDC_ALG_SHA256: {
         struct sha256_ctx c;
         sha256_init(&c); sha256_update(&c, in_len, in); sha256_digest(&c, 32, out);
+        break;
+    }
+    case SDC_ALG_SHA224: {
+        struct sha224_ctx c;
+        sha224_init(&c); sha224_update(&c, in_len, in); sha224_digest(&c, 28, out);
         break;
     }
     case SDC_ALG_SHA384: {
