@@ -29,6 +29,7 @@ static int gc_supports(sdc_alg alg)
     case SDC_ALG_AES_128_GCM:
     case SDC_ALG_CHACHA20_POLY1305:
     case SDC_ALG_SHA256:
+    case SDC_ALG_SHA224:
     case SDC_ALG_SHA384:
     case SDC_ALG_SHA512:
     case SDC_ALG_SHA3_256:
@@ -122,6 +123,7 @@ static int md_algo(sdc_alg alg)
 {
     switch (alg) {
     case SDC_ALG_SHA256:   return GCRY_MD_SHA256;
+    case SDC_ALG_SHA224:   return GCRY_MD_SHA224;
     case SDC_ALG_SHA384:   return GCRY_MD_SHA384;
     case SDC_ALG_SHA512:   return GCRY_MD_SHA512;
     case SDC_ALG_SHA3_256: return GCRY_MD_SHA3_256;
