@@ -33,6 +33,7 @@ static int gc_supports(sdc_alg alg)
     case SDC_ALG_SHA384:
     case SDC_ALG_SHA512:
     case SDC_ALG_SHA3_256:
+    case SDC_ALG_SHA3_384:
     case SDC_ALG_SHA3_512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
@@ -127,6 +128,7 @@ static int md_algo(sdc_alg alg)
     case SDC_ALG_SHA384:   return GCRY_MD_SHA384;
     case SDC_ALG_SHA512:   return GCRY_MD_SHA512;
     case SDC_ALG_SHA3_256: return GCRY_MD_SHA3_256;
+    case SDC_ALG_SHA3_384: return GCRY_MD_SHA3_384;
     case SDC_ALG_SHA3_512: return GCRY_MD_SHA3_512;
     default:               return 0;
     }
