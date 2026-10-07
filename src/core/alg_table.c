@@ -29,6 +29,7 @@ static const sdc_alg_info g_algs[SDC_ALG__COUNT] = {
     A(SDC_ALG_AES_128_GCM,       "AES-128-GCM",       SDC_FAMILY_AEAD, 16, 12, 16,  0,    0,    0,    0,    0,  0),
     A(SDC_ALG_SHA224,            "SHA-224",           SDC_FAMILY_HASH,  0,  0,  0, 28,    0,    0,    0,    0,  0),
     A(SDC_ALG_SHA3_384,          "SHA3-384",          SDC_FAMILY_HASH,  0,  0,  0, 48,    0,    0,    0,    0,  0),
+    A(SDC_ALG_BLAKE2B_512,       "BLAKE2b-512",       SDC_FAMILY_HASH,  0,  0,  0, 64,    0,    0,    0,    0,  0),
 };
 #undef A
 
