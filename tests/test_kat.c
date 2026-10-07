@@ -78,6 +78,9 @@ static const hash_kat HASH[] = {
     /* FIPS 180-4 SHA-224(\"abc\") */
     { SDC_ALG_SHA224, "616263",
       "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7" },
+    /* FIPS 202 SHA3-384(abc) */
+    { SDC_ALG_SHA3_384, "616263",
+      "ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b298d88cea927ac7f539f1edf228376d25" },
 };
 
 typedef struct { sdc_alg alg; const char *src, *ikm, *salt, *info, *okm; } hkdf_kat;
