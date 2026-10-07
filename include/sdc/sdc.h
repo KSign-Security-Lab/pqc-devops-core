@@ -89,6 +89,7 @@ typedef enum sdc_alg {
     SDC_ALG_AES_128_GCM,
     SDC_ALG_SHA224,
     SDC_ALG_SHA3_384,
+    SDC_ALG_BLAKE2B_512,
     SDC_ALG__COUNT
 } sdc_alg;
 
