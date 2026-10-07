@@ -29,6 +29,7 @@ static int ntl_supports(sdc_alg alg)
     case SDC_ALG_SHA384:
     case SDC_ALG_SHA512:
     case SDC_ALG_SHA3_256:
+    case SDC_ALG_SHA3_384:
     case SDC_ALG_SHA3_512:
     case SDC_ALG_HKDF_SHA256:
     case SDC_ALG_HKDF_SHA512:
@@ -165,6 +166,11 @@ static sdc_status ntl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
     case SDC_ALG_SHA3_256: {
         struct sha3_256_ctx c;
         sha3_256_init(&c); sha3_256_update(&c, in_len, in); sha3_256_digest(&c, 32, out);
+        break;
+    }
+    case SDC_ALG_SHA3_384: {
+        struct sha3_384_ctx c;
+        sha3_384_init(&c); sha3_384_update(&c, in_len, in); sha3_384_digest(&c, 48, out);
         break;
     }
     case SDC_ALG_SHA3_512: {
