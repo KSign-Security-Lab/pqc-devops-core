@@ -187,6 +187,18 @@ SDC_API sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
                             const uint8_t *info, size_t info_len,
                             uint8_t *out, size_t out_len);
 
+/* HMAC. Any key length; out receives digest_len bytes. */
+SDC_API sdc_status sdc_mac(const sdc_ctx *ctx, sdc_alg alg,
+                           const uint8_t *key, size_t key_len,
+                           const uint8_t *msg, size_t msg_len,
+                           uint8_t *out, size_t *out_len);
+/* Recompute and compare in constant time. Truncated tags are not
+ * accepted: tag_len must equal digest_len. */
+SDC_API sdc_status sdc_mac_verify(const sdc_ctx *ctx, sdc_alg alg,
+                                  const uint8_t *key, size_t key_len,
+                                  const uint8_t *msg, size_t msg_len,
+                                  const uint8_t *tag, size_t tag_len);
+
 SDC_API sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
                                    uint8_t *pk, size_t *pk_len,
                                    uint8_t *sk, size_t *sk_len);
