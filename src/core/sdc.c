@@ -312,6 +312,42 @@ sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+sdc_status sdc_mac(const sdc_ctx *ctx, sdc_alg alg,
+                   const uint8_t *key, size_t key_len,
+                   const uint8_t *msg, size_t msg_len,
+                   uint8_t *out, size_t *out_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_MAC, OP(mac), &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_IN(key, key_len);
+    CHECK_IN(msg, msg_len);
+    CHECK_OUT(out, out_len, ai->digest_len);
+    st = p->mac(alg, key, key_len, msg, msg_len, out);
+    if (st == SDC_OK)
+        *out_len = ai->digest_len;
+    return st;
+}
+
+sdc_status sdc_mac_verify(const sdc_ctx *ctx, sdc_alg alg,
+                          const uint8_t *key, size_t key_len,
+                          const uint8_t *msg, size_t msg_len,
+                          const uint8_t *tag, size_t tag_len)
+{
+    uint8_t calc[64];
+    size_t n = sizeof(calc);
+    if (!tag)
+        return SDC_ERR_INVALID_ARG;
+    sdc_status st = sdc_mac(ctx, alg, key, key_len, msg, msg_len, calc, &n);
+    if (st != SDC_OK)
+        return st;
+    st = tag_len == n && sdc_ct_equal(calc, tag, n) ? SDC_OK : SDC_ERR_VERIFY_FAILED;
+    sdc_memzero(calc, sizeof(calc));
+    return st;
+}
+
 static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
                           uint8_t *pk, size_t *pk_len,
                           uint8_t *sk, size_t *sk_len)
