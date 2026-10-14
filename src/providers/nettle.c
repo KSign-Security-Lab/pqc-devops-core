@@ -33,6 +33,8 @@ static int ntl_supports(sdc_alg alg)
     case SDC_ALG_SHA3_512:
     case SDC_ALG_HKDF_SHA256:
     case SDC_ALG_HKDF_SHA512:
+    case SDC_ALG_HMAC_SHA256:
+    case SDC_ALG_HMAC_SHA512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
         return 1;
@@ -217,6 +219,25 @@ static sdc_status ntl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
     return SDC_OK;
 }
 
+static sdc_status ntl_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
+                          const uint8_t *msg, size_t msg_len, uint8_t *out)
+{
+    if (alg == SDC_ALG_HMAC_SHA256) {
+        struct hmac_sha256_ctx c;
+        hmac_sha256_set_key(&c, key_len, key);
+        hmac_sha256_update(&c, msg_len, msg);
+        hmac_sha256_digest(&c, SHA256_DIGEST_SIZE, out);
+        sdc_memzero(&c, sizeof(c));
+    } else {
+        struct hmac_sha512_ctx c;
+        hmac_sha512_set_key(&c, key_len, key);
+        hmac_sha512_update(&c, msg_len, msg);
+        hmac_sha512_digest(&c, SHA512_DIGEST_SIZE, out);
+        sdc_memzero(&c, sizeof(c));
+    }
+    return SDC_OK;
+}
+
 /* ------------------------------------------------------------- signatures */
 
 static void mpz_to_be32(uint8_t out[32], const mpz_t v)
@@ -355,6 +376,7 @@ const sdc_provider sdc_provider_nettle = {
     .aead_decrypt = ntl_aead_decrypt,
     .hash         = ntl_hash,
     .hkdf         = ntl_hkdf,
+    .mac          = ntl_mac,
     .sig_keypair  = ntl_sig_keypair,
     .sign         = ntl_sign,
     .verify       = ntl_verify,
