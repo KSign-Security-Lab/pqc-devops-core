@@ -27,6 +27,8 @@ static int ossl_supports(sdc_alg alg)
     case SDC_ALG_BLAKE2B_512:
     case SDC_ALG_HKDF_SHA256:
     case SDC_ALG_HKDF_SHA512:
+    case SDC_ALG_HMAC_SHA256:
+    case SDC_ALG_HMAC_SHA512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
         return 1;
@@ -178,6 +180,18 @@ static sdc_status ossl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
     EVP_KDF_CTX_free(kc);
     EVP_KDF_free(kdf);
     return st;
+}
+
+static sdc_status ossl_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
+                           const uint8_t *msg, size_t msg_len, uint8_t *out)
+{
+    static const uint8_t empty[1];
+    size_t n = 0, want = alg == SDC_ALG_HMAC_SHA256 ? 32 : 64;
+    if (!EVP_Q_mac(NULL, "HMAC", NULL, alg == SDC_ALG_HMAC_SHA256 ? "SHA256" : "SHA512",
+                   NULL, key ? key : empty, key_len, msg ? msg : empty, msg_len,
+                   out, want, &n) || n != want)
+        return SDC_ERR_PROVIDER;
+    return SDC_OK;
 }
 
 /* ------------------------------------------------------------- signatures */
@@ -370,6 +384,7 @@ const sdc_provider sdc_provider_openssl = {
     .aead_decrypt = ossl_aead_decrypt,
     .hash         = ossl_hash,
     .hkdf         = ossl_hkdf,
+    .mac          = ossl_mac,
     .sig_keypair  = ossl_sig_keypair,
     .sign         = ossl_sign,
     .verify       = ossl_verify,
