@@ -92,6 +92,7 @@ typedef enum sdc_alg {
     SDC_ALG_BLAKE2B_512,
     SDC_ALG_HMAC_SHA256,
     SDC_ALG_HMAC_SHA512,
+    SDC_ALG_X25519,
     SDC_ALG__COUNT
 } sdc_alg;
 
@@ -102,7 +103,8 @@ typedef enum sdc_family {
     SDC_FAMILY_KDF,
     SDC_FAMILY_SIG,
     SDC_FAMILY_KEM,
-    SDC_FAMILY_MAC
+    SDC_FAMILY_MAC,
+    SDC_FAMILY_KEX
 } sdc_family;
 
 /* Fixed sizes of an algorithm, in bytes (0 = not applicable).
