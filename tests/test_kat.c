@@ -103,6 +103,23 @@ static const hkdf_kat HKDF[] = {
       "9d201395faa4b61a96c8" },
 };
 
+typedef struct { sdc_alg alg; const char *src, *key, *msg, *tag; } mac_kat;
+
+static const mac_kat MAC[] = {
+    /* RFC 4231 test case 1 */
+    { SDC_ALG_HMAC_SHA256, "RFC4231 TC1", "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "4869205468657265",
+      "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7" },
+    /* RFC 4231 test case 2: key "Jefe" */
+    { SDC_ALG_HMAC_SHA256, "RFC4231 TC2", "4a656665",
+      "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+      "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843" },
+    { SDC_ALG_HMAC_SHA512, "RFC4231 TC2", "4a656665",
+      "7768617420646f2079612077616e7420666f72206e6f7468696e673f",
+      "164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea250554"
+      "9758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737" },
+};
+
 typedef struct { sdc_alg alg; const char *src, *sk, *pk, *msg, *sig; } sig_kat;
 
 static const sig_kat SIG[] = {
@@ -171,6 +188,22 @@ static void run_hkdf(const sdc_ctx *ctx, const char *prov, const hkdf_kat *v)
     CHECK(memcmp(D, E, ol) == 0, "%s %s okm mismatch", prov, v->src);
 }
 
+static void run_mac(const sdc_ctx *ctx, const char *prov, const mac_kat *v)
+{
+    size_t kl = unhex(v->key, A, sizeof A), ml = unhex(v->msg, B, sizeof B);
+    size_t tl = unhex(v->tag, C, sizeof C), n = sizeof D;
+    CHECK_ST(sdc_mac(ctx, v->alg, A, kl, B, ml, D, &n), SDC_OK, "%s %s", prov, v->src);
+    CHECK(n == tl && memcmp(C, D, tl) == 0, "%s %s %s tag mismatch", prov,
+          sdc_alg_name(v->alg), v->src);
+    CHECK_ST(sdc_mac_verify(ctx, v->alg, A, kl, B, ml, C, tl), SDC_OK,
+             "%s %s verify", prov, v->src);
+    C[0] ^= 1;
+    CHECK_ST(sdc_mac_verify(ctx, v->alg, A, kl, B, ml, C, tl), SDC_ERR_VERIFY_FAILED,
+             "%s %s tampered", prov, v->src);
+    CHECK_ST(sdc_mac_verify(ctx, v->alg, A, kl, B, ml, D, tl - 1), SDC_ERR_VERIFY_FAILED,
+             "%s %s truncated", prov, v->src);
+}
+
 static void run_sig(const sdc_ctx *ctx, const char *prov, const sig_kat *v)
 {
     size_t skl = unhex(v->sk, A, sizeof A), pkl = unhex(v->pk, B, sizeof B);
@@ -218,6 +251,7 @@ int main(void)
         RUN(HASH, run_hash);
         RUN(HKDF, run_hkdf);
         RUN(SIG, run_sig);
+        RUN(MAC, run_mac);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
     }
