@@ -35,6 +35,8 @@ static int gc_supports(sdc_alg alg)
     case SDC_ALG_SHA3_256:
     case SDC_ALG_SHA3_384:
     case SDC_ALG_SHA3_512:
+    case SDC_ALG_HMAC_SHA256:
+    case SDC_ALG_HMAC_SHA512:
     case SDC_ALG_BLAKE2B_512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
@@ -142,6 +144,26 @@ static sdc_status gc_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
     static const uint8_t empty[1];
     gcry_md_hash_buffer(md_algo(alg), out, in ? in : empty, in_len);
     return SDC_OK;
+}
+
+static sdc_status gc_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
+                         const uint8_t *msg, size_t msg_len, uint8_t *out)
+{
+    /* HMAC zero-pads the key to the block size, so an empty key is
+     * equivalent to a single zero byte; libgcrypt rejects zero-length keys. */
+    static const uint8_t zero[1];
+    gcry_mac_hd_t h;
+    size_t n = alg == SDC_ALG_HMAC_SHA256 ? 32 : 64;
+    sdc_status st = SDC_ERR_PROVIDER;
+    if (gcry_mac_open(&h, alg == SDC_ALG_HMAC_SHA256 ? GCRY_MAC_HMAC_SHA256
+                                                    : GCRY_MAC_HMAC_SHA512, 0, NULL))
+        return SDC_ERR_PROVIDER;
+    if (!gcry_mac_setkey(h, key_len ? key : zero, key_len ? key_len : 1) &&
+        !gcry_mac_write(h, msg ? (const void *)msg : (const void *)zero, msg_len) &&
+        !gcry_mac_read(h, out, &n))
+        st = SDC_OK;
+    gcry_mac_close(h);
+    return st;
 }
 
 /* ------------------------------------------------------------- signatures */
@@ -327,6 +349,7 @@ const sdc_provider sdc_provider_gcrypt = {
     .aead_encrypt = gc_aead_encrypt,
     .aead_decrypt = gc_aead_decrypt,
     .hash         = gc_hash,
+    .mac          = gc_mac,
     .sig_keypair  = gc_sig_keypair,
     .sign         = gc_sign,
     .verify       = gc_verify,
