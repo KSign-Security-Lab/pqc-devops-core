@@ -62,8 +62,8 @@ static void kdf(sdc_alg alg, size_t x, size_t y)
 
 static void mac(sdc_alg alg, size_t x, size_t y)
 {
-    uint8_t a[64], b[64];
-    size_t na = sizeof a, nb = sizeof b;
+    uint8_t a[64];
+    size_t na = sizeof a;
     /* empty key and a key longer than the block size exercise both paths */
     for (size_t kl = 0; kl <= 200; kl += 200) {
         CHECK_ST(sdc_mac(ctxs[x], alg, kl ? msg : NULL, kl, msg, sizeof msg, a, &na), SDC_OK,
@@ -71,7 +71,6 @@ static void mac(sdc_alg alg, size_t x, size_t y)
         CHECK_ST(sdc_mac_verify(ctxs[y], alg, kl ? msg : NULL, kl, msg, sizeof msg, a, na),
                  SDC_OK, "%s %s verifies %s (key %zu)", sdc_alg_name(alg), names[y],
                  names[x], kl);
-        (void)b; (void)nb;
     }
 }
 
