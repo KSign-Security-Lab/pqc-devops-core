@@ -226,6 +226,17 @@ SDC_API sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
                                   const uint8_t *ct, size_t ct_len,
                                   uint8_t *ss, size_t *ss_len);
 
+/* Key agreement (RFC 7748). Both sides call sdc_kex_derive with their own
+ * secret key and the peer's public key. A peer key that yields the all-zero
+ * shared secret (low-order point) is rejected with SDC_ERR_INVALID_ARG. */
+SDC_API sdc_status sdc_kex_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                                   uint8_t *pk, size_t *pk_len,
+                                   uint8_t *sk, size_t *sk_len);
+SDC_API sdc_status sdc_kex_derive(const sdc_ctx *ctx, sdc_alg alg,
+                                  const uint8_t *sk, size_t sk_len,
+                                  const uint8_t *peer_pk, size_t peer_pk_len,
+                                  uint8_t *ss, size_t *ss_len);
+
 /* Zero memory in a way the compiler will not optimise away. */
 SDC_API void sdc_memzero(void *p, size_t len);
 /* Constant-time comparison: 1 if equal, 0 otherwise. Timing depends only
