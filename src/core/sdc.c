@@ -354,7 +354,8 @@ static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
 {
     const sdc_alg_info *ai;
     const sdc_provider *p;
-    size_t op = fam == SDC_FAMILY_SIG ? OP(sig_keypair) : OP(kem_keypair);
+    size_t op = fam == SDC_FAMILY_SIG ? OP(sig_keypair)
+              : fam == SDC_FAMILY_KEM ? OP(kem_keypair) : OP(kex_keypair);
     sdc_status st = prepare(ctx, alg, fam, op, &ai, &p);
     if (st != SDC_OK)
         return st;
@@ -368,7 +369,8 @@ static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
     if (!pk || !sk)
         return SDC_ERR_INVALID_ARG;
     st = fam == SDC_FAMILY_SIG ? p->sig_keypair(alg, pk, sk)
-                               : p->kem_keypair(alg, pk, sk);
+       : fam == SDC_FAMILY_KEM ? p->kem_keypair(alg, pk, sk)
+                               : p->kex_keypair(alg, pk, sk);
     if (st == SDC_OK) {
         *pk_len = ai->pk_len;
         *sk_len = ai->sk_len;
@@ -475,6 +477,38 @@ sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
     CHECK_FIXED(ct, ct_len, ai->ct_len);
     CHECK_OUT(ss, ss_len, ai->ss_len);
     st = p->kem_decaps(alg, sk, ct, ss);
+    if (st == SDC_OK)
+        *ss_len = ai->ss_len;
+    else
+        sdc_memzero(ss, ai->ss_len);
+    return st;
+}
+
+sdc_status sdc_kex_keypair(const sdc_ctx *ctx, sdc_alg alg,
+                           uint8_t *pk, size_t *pk_len,
+                           uint8_t *sk, size_t *sk_len)
+{
+    return keypair(ctx, alg, SDC_FAMILY_KEX, pk, pk_len, sk, sk_len);
+}
+
+sdc_status sdc_kex_derive(const sdc_ctx *ctx, sdc_alg alg,
+                          const uint8_t *sk, size_t sk_len,
+                          const uint8_t *peer_pk, size_t peer_pk_len,
+                          uint8_t *ss, size_t *ss_len)
+{
+    static const uint8_t zero[64];
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_KEX, OP(kex_derive), &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(sk, sk_len, ai->sk_len);
+    CHECK_FIXED(peer_pk, peer_pk_len, ai->pk_len);
+    CHECK_OUT(ss, ss_len, ai->ss_len);
+    st = p->kex_derive(alg, sk, peer_pk, ss);
+    /* Defence in depth: never hand out an all-zero secret. */
+    if (st == SDC_OK && sdc_ct_equal(ss, zero, ai->ss_len))
+        st = SDC_ERR_INVALID_ARG;
     if (st == SDC_OK)
         *ss_len = ai->ss_len;
     else
