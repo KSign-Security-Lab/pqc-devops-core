@@ -67,6 +67,11 @@ typedef struct sdc_provider {
                              uint8_t *ct, uint8_t *ss);
     sdc_status (*kem_decaps)(sdc_alg alg, const uint8_t *sk,
                              const uint8_t *ct, uint8_t *ss);
+
+    sdc_status (*kex_keypair)(sdc_alg alg, uint8_t *pk, uint8_t *sk);
+    /* Must return SDC_ERR_INVALID_ARG if the peer key is unusable. */
+    sdc_status (*kex_derive)(sdc_alg alg, const uint8_t *sk,
+                             const uint8_t *peer_pk, uint8_t *ss);
 } sdc_provider;
 
 /* Registry (src/core/registry.c) */
