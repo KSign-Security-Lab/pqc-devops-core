@@ -5,6 +5,7 @@
 #include <sys/random.h>
 
 #include <nettle/chacha-poly1305.h>
+#include <nettle/curve25519.h>
 #include <nettle/ecc-curve.h>
 #include <nettle/ecc.h>
 #include <nettle/ecdsa.h>
@@ -37,6 +38,7 @@ static int ntl_supports(sdc_alg alg)
     case SDC_ALG_HMAC_SHA512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
+    case SDC_ALG_X25519:
         return 1;
     default:
         return 0;
@@ -368,6 +370,25 @@ static sdc_status ntl_verify(sdc_alg alg, const uint8_t *pk,
     return st;
 }
 
+/* ---------------------------------------------------------- key agreement */
+
+static sdc_status ntl_kex_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    (void)alg;
+    sdc_status st = ntl_random(sk, 32);
+    if (st == SDC_OK)
+        curve25519_mul_g(pk, sk); /* clamps the scalar internally */
+    return st;
+}
+
+static sdc_status ntl_kex_derive(sdc_alg alg, const uint8_t *sk,
+                                 const uint8_t *peer_pk, uint8_t *ss)
+{
+    (void)alg;
+    curve25519_mul(ss, sk, peer_pk);
+    return SDC_OK; /* all-zero output is rejected by the core */
+}
+
 const sdc_provider sdc_provider_nettle = {
     .name         = "nettle",
     .supports     = ntl_supports,
@@ -380,4 +401,6 @@ const sdc_provider sdc_provider_nettle = {
     .sig_keypair  = ntl_sig_keypair,
     .sign         = ntl_sign,
     .verify       = ntl_verify,
+    .kex_keypair  = ntl_kex_keypair,
+    .kex_derive   = ntl_kex_derive,
 };
