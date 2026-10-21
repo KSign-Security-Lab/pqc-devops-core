@@ -31,6 +31,7 @@ static int ossl_supports(sdc_alg alg)
     case SDC_ALG_HMAC_SHA512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
+    case SDC_ALG_X25519:
         return 1;
     default:
         return 0;
@@ -376,6 +377,42 @@ static sdc_status ossl_verify(sdc_alg alg, const uint8_t *pk,
     return st;
 }
 
+/* ---------------------------------------------------------- key agreement */
+
+static sdc_status ossl_kex_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    (void)alg;
+    size_t pl = 32, sl = 32;
+    sdc_status st = SDC_ERR_PROVIDER;
+    EVP_PKEY *pkey = EVP_PKEY_Q_keygen(NULL, NULL, "X25519");
+    if (pkey && EVP_PKEY_get_raw_public_key(pkey, pk, &pl) == 1 &&
+        EVP_PKEY_get_raw_private_key(pkey, sk, &sl) == 1 && pl == 32 && sl == 32)
+        st = SDC_OK;
+    EVP_PKEY_free(pkey);
+    return st;
+}
+
+static sdc_status ossl_kex_derive(sdc_alg alg, const uint8_t *sk,
+                                  const uint8_t *peer_pk, uint8_t *ss)
+{
+    (void)alg;
+    sdc_status st = SDC_ERR_PROVIDER;
+    size_t n = 32;
+    EVP_PKEY *self = EVP_PKEY_new_raw_private_key(EVP_PKEY_X25519, NULL, sk, 32);
+    EVP_PKEY *peer = EVP_PKEY_new_raw_public_key(EVP_PKEY_X25519, NULL, peer_pk, 32);
+    EVP_PKEY_CTX *pc = self ? EVP_PKEY_CTX_new(self, NULL) : NULL;
+    if (pc && peer && EVP_PKEY_derive_init(pc) == 1) {
+        /* set_peer/derive fail for low-order peer points */
+        st = EVP_PKEY_derive_set_peer(pc, peer) == 1 &&
+             EVP_PKEY_derive(pc, ss, &n) == 1 && n == 32
+                 ? SDC_OK : SDC_ERR_INVALID_ARG;
+    }
+    EVP_PKEY_CTX_free(pc);
+    EVP_PKEY_free(peer);
+    EVP_PKEY_free(self);
+    return st;
+}
+
 const sdc_provider sdc_provider_openssl = {
     .name         = "openssl",
     .supports     = ossl_supports,
@@ -388,4 +425,6 @@ const sdc_provider sdc_provider_openssl = {
     .sig_keypair  = ossl_sig_keypair,
     .sign         = ossl_sign,
     .verify       = ossl_verify,
+    .kex_keypair  = ossl_kex_keypair,
+    .kex_derive   = ossl_kex_derive,
 };
