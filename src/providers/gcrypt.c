@@ -40,6 +40,7 @@ static int gc_supports(sdc_alg alg)
     case SDC_ALG_BLAKE2B_512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
+    case SDC_ALG_X25519:
         return 1;
     default:
         return 0;
@@ -341,6 +342,25 @@ static sdc_status gc_verify(sdc_alg alg, const uint8_t *pk,
     return st;
 }
 
+/* ---------------------------------------------------------- key agreement */
+
+static sdc_status gc_kex_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
+{
+    (void)alg;
+    gcry_randomize(sk, 32, GCRY_VERY_STRONG_RANDOM);
+    /* NULL point = curve base point; the scalar is clamped per RFC 7748 */
+    return gcry_ecc_mul_point(GCRY_ECC_CURVE25519, pk, sk, NULL) ? SDC_ERR_PROVIDER
+                                                                  : SDC_OK;
+}
+
+static sdc_status gc_kex_derive(sdc_alg alg, const uint8_t *sk,
+                                const uint8_t *peer_pk, uint8_t *ss)
+{
+    (void)alg;
+    return gcry_ecc_mul_point(GCRY_ECC_CURVE25519, ss, sk, peer_pk) ? SDC_ERR_INVALID_ARG
+                                                                    : SDC_OK;
+}
+
 const sdc_provider sdc_provider_gcrypt = {
     .name         = "gcrypt",
     .init         = gc_init,
@@ -353,4 +373,6 @@ const sdc_provider sdc_provider_gcrypt = {
     .sig_keypair  = gc_sig_keypair,
     .sign         = gc_sign,
     .verify       = gc_verify,
+    .kex_keypair  = gc_kex_keypair,
+    .kex_derive   = gc_kex_derive,
 };
