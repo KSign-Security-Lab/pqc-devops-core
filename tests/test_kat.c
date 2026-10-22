@@ -143,6 +143,13 @@ static const sig_kat SIG[] = {
       "f7cb1c942d657c41d436c7a1b6e29f65f3e900dbb9aff4064dc4ab2f843acda8" },
 };
 
+/* RFC 7748 section 6.1 */
+static const char *const X25519_A_SK = "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
+static const char *const X25519_A_PK = "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+static const char *const X25519_B_SK = "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
+static const char *const X25519_B_PK = "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f";
+static const char *const X25519_SS   = "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742";
+
 /* ------------------------------------------------------------------ runner */
 
 static uint8_t A[512], B[512], C[512], D[512], E[512], F[512], G[512];
@@ -228,6 +235,28 @@ static void run_sig(const sdc_ctx *ctx, const char *prov, const sig_kat *v)
              "%s %s tampered msg", prov, v->src);
 }
 
+static int run_x25519(const sdc_ctx *ctx, const char *prov)
+{
+    if (!sdc_provider_supports(prov, SDC_ALG_X25519))
+        return 0;
+    unhex(X25519_A_SK, A, sizeof A); unhex(X25519_A_PK, B, sizeof B);
+    unhex(X25519_B_SK, C, sizeof C); unhex(X25519_B_PK, D, sizeof D);
+    unhex(X25519_SS, E, sizeof E);
+    size_t n = 32;
+    CHECK_ST(sdc_kex_derive(ctx, SDC_ALG_X25519, A, 32, D, 32, F, &n), SDC_OK,
+             "%s X25519 alice", prov);
+    CHECK(memcmp(F, E, 32) == 0, "%s X25519 alice secret", prov);
+    n = 32;
+    CHECK_ST(sdc_kex_derive(ctx, SDC_ALG_X25519, C, 32, B, 32, F, &n), SDC_OK,
+             "%s X25519 bob", prov);
+    CHECK(memcmp(F, E, 32) == 0, "%s X25519 bob secret", prov);
+    memset(G, 0, 32); /* low-order point */
+    n = 32;
+    CHECK_ST(sdc_kex_derive(ctx, SDC_ALG_X25519, A, 32, G, 32, F, &n),
+             SDC_ERR_INVALID_ARG, "%s X25519 zero point", prov);
+    return 1;
+}
+
 #define COUNT(a) (sizeof(a) / sizeof((a)[0]))
 
 int main(void)
@@ -252,6 +281,7 @@ int main(void)
         RUN(HKDF, run_hkdf);
         RUN(SIG, run_sig);
         RUN(MAC, run_mac);
+        ran += run_x25519(ctx, prov);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
     }
