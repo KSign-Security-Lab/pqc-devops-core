@@ -125,6 +125,23 @@ static void kem(sdc_alg alg, size_t x, size_t y)
     free(pk); free(sk); free(ct);
 }
 
+static void kex(sdc_alg alg, size_t x, size_t y)
+{
+    uint8_t apk[32], ask[32], bpk[32], bsk[32], s1[32], s2[32];
+    size_t l1 = 32, l2 = 32, n1 = 32, n2 = 32;
+    CHECK_ST(sdc_kex_keypair(ctxs[x], alg, apk, &l1, ask, &l2), SDC_OK,
+             "%s keypair %s", sdc_alg_name(alg), names[x]);
+    l1 = l2 = 32;
+    CHECK_ST(sdc_kex_keypair(ctxs[y], alg, bpk, &l1, bsk, &l2), SDC_OK,
+             "%s keypair %s", sdc_alg_name(alg), names[y]);
+    CHECK_ST(sdc_kex_derive(ctxs[x], alg, ask, 32, bpk, 32, s1, &n1), SDC_OK,
+             "%s derive %s", sdc_alg_name(alg), names[x]);
+    CHECK_ST(sdc_kex_derive(ctxs[y], alg, bsk, 32, apk, 32, s2, &n2), SDC_OK,
+             "%s derive %s", sdc_alg_name(alg), names[y]);
+    CHECK(memcmp(s1, s2, 32) == 0, "%s %s<->%s secrets differ", sdc_alg_name(alg),
+          names[x], names[y]);
+}
+
 int main(void)
 {
     sdc_init();
@@ -158,6 +175,7 @@ int main(void)
                 case SDC_FAMILY_SIG:  sig(alg, x, y); break;
                 case SDC_FAMILY_KEM:  kem(alg, x, y); break;
                 case SDC_FAMILY_MAC:  mac(alg, x, y); break;
+                case SDC_FAMILY_KEX:  kex(alg, x, y); break;
                 default: break;
                 }
             }
