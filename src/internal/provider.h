@@ -47,6 +47,10 @@ typedef struct sdc_provider {
                        const uint8_t *info, size_t info_len,
                        uint8_t *out, size_t out_len);
 
+    sdc_status (*pbkdf2)(sdc_alg alg, const uint8_t *pw, size_t pw_len,
+                         const uint8_t *salt, size_t salt_len,
+                         uint32_t iterations, uint8_t *out, size_t out_len);
+
     /* out has digest_len bytes. */
     sdc_status (*mac)(sdc_alg alg, const uint8_t *key, size_t key_len,
                       const uint8_t *msg, size_t msg_len, uint8_t *out);
