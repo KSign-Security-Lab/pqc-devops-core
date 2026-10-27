@@ -1,1 +1,1 @@
-# sdc-sdk
+# pqc-devops-core
