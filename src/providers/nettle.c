@@ -14,6 +14,7 @@
 #include <nettle/hkdf.h>
 #include <nettle/hmac.h>
 #include <nettle/memops.h>
+#include <nettle/pbkdf2.h>
 #include <nettle/sha2.h>
 #include <nettle/sha3.h>
 
@@ -36,6 +37,7 @@ static int ntl_supports(sdc_alg alg)
     case SDC_ALG_HKDF_SHA512:
     case SDC_ALG_HMAC_SHA256:
     case SDC_ALG_HMAC_SHA512:
+    case SDC_ALG_PBKDF2_SHA256:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
     case SDC_ALG_X25519:
@@ -240,6 +242,15 @@ static sdc_status ntl_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
     return SDC_OK;
 }
 
+static sdc_status ntl_pbkdf2(sdc_alg alg, const uint8_t *pw, size_t pw_len,
+                             const uint8_t *salt, size_t salt_len,
+                             uint32_t iterations, uint8_t *out, size_t out_len)
+{
+    (void)alg;
+    pbkdf2_hmac_sha256(pw_len, pw, iterations, salt_len, salt, out_len, out);
+    return SDC_OK;
+}
+
 /* ------------------------------------------------------------- signatures */
 
 static void mpz_to_be32(uint8_t out[32], const mpz_t v)
@@ -398,6 +409,7 @@ const sdc_provider sdc_provider_nettle = {
     .hash         = ntl_hash,
     .hkdf         = ntl_hkdf,
     .mac          = ntl_mac,
+    .pbkdf2       = ntl_pbkdf2,
     .sig_keypair  = ntl_sig_keypair,
     .sign         = ntl_sign,
     .verify       = ntl_verify,
