@@ -37,6 +37,7 @@ static int gc_supports(sdc_alg alg)
     case SDC_ALG_SHA3_512:
     case SDC_ALG_HMAC_SHA256:
     case SDC_ALG_HMAC_SHA512:
+    case SDC_ALG_PBKDF2_SHA256:
     case SDC_ALG_BLAKE2B_512:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
@@ -165,6 +166,17 @@ static sdc_status gc_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
         st = SDC_OK;
     gcry_mac_close(h);
     return st;
+}
+
+static sdc_status gc_pbkdf2(sdc_alg alg, const uint8_t *pw, size_t pw_len,
+                            const uint8_t *salt, size_t salt_len,
+                            uint32_t iterations, uint8_t *out, size_t out_len)
+{
+    static const uint8_t empty[1];
+    (void)alg;
+    return gcry_kdf_derive(pw ? pw : empty, pw_len, GCRY_KDF_PBKDF2, GCRY_MD_SHA256,
+                           salt ? salt : empty, salt_len, iterations, out_len, out)
+               ? SDC_ERR_PROVIDER : SDC_OK;
 }
 
 /* ------------------------------------------------------------- signatures */
@@ -370,6 +382,7 @@ const sdc_provider sdc_provider_gcrypt = {
     .aead_decrypt = gc_aead_decrypt,
     .hash         = gc_hash,
     .mac          = gc_mac,
+    .pbkdf2       = gc_pbkdf2,
     .sig_keypair  = gc_sig_keypair,
     .sign         = gc_sign,
     .verify       = gc_verify,
