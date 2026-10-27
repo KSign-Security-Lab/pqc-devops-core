@@ -29,6 +29,7 @@ static int ossl_supports(sdc_alg alg)
     case SDC_ALG_HKDF_SHA512:
     case SDC_ALG_HMAC_SHA256:
     case SDC_ALG_HMAC_SHA512:
+    case SDC_ALG_PBKDF2_SHA256:
     case SDC_ALG_ED25519:
     case SDC_ALG_ECDSA_P256_SHA256:
     case SDC_ALG_X25519:
@@ -193,6 +194,20 @@ static sdc_status ossl_mac(sdc_alg alg, const uint8_t *key, size_t key_len,
                    out, want, &n) || n != want)
         return SDC_ERR_PROVIDER;
     return SDC_OK;
+}
+
+static sdc_status ossl_pbkdf2(sdc_alg alg, const uint8_t *pw, size_t pw_len,
+                              const uint8_t *salt, size_t salt_len,
+                              uint32_t iterations, uint8_t *out, size_t out_len)
+{
+    static const uint8_t empty[1];
+    (void)alg;
+    if (iterations > INT_MAX)
+        return SDC_ERR_INVALID_ARG;
+    return PKCS5_PBKDF2_HMAC(pw ? (const char *)pw : (const char *)empty, (int)pw_len,
+                             salt ? salt : empty, (int)salt_len, (int)iterations,
+                             EVP_sha256(), (int)out_len, out) == 1
+               ? SDC_OK : SDC_ERR_PROVIDER;
 }
 
 /* ------------------------------------------------------------- signatures */
@@ -422,6 +437,7 @@ const sdc_provider sdc_provider_openssl = {
     .hash         = ossl_hash,
     .hkdf         = ossl_hkdf,
     .mac          = ossl_mac,
+    .pbkdf2       = ossl_pbkdf2,
     .sig_keypair  = ossl_sig_keypair,
     .sign         = ossl_sign,
     .verify       = ossl_verify,
