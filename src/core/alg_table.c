@@ -33,6 +33,7 @@ static const sdc_alg_info g_algs[SDC_ALG__COUNT] = {
     A(SDC_ALG_HMAC_SHA256,       "HMAC-SHA256",       SDC_FAMILY_MAC,   0,  0,  0, 32,    0,    0,    0,    0,  0),
     A(SDC_ALG_HMAC_SHA512,       "HMAC-SHA512",       SDC_FAMILY_MAC,   0,  0,  0, 64,    0,    0,    0,    0,  0),
     A(SDC_ALG_X25519,            "X25519",            SDC_FAMILY_KEX,   0,  0,  0,  0,   32,   32,    0,    0, 32),
+    A(SDC_ALG_PBKDF2_SHA256,     "PBKDF2-HMAC-SHA256", SDC_FAMILY_PBKDF, 0, 0,  0, 32,    0,    0,    0,    0,  0),
 };
 #undef A
 
@@ -88,6 +89,7 @@ const char *sdc_family_name(sdc_family family)
     case SDC_FAMILY_KEM:  return "KEM";
     case SDC_FAMILY_MAC:  return "MAC";
     case SDC_FAMILY_KEX:  return "KEX";
+    case SDC_FAMILY_PBKDF: return "PBKDF";
     default:              return NULL;
     }
 }

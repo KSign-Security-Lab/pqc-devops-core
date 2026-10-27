@@ -93,6 +93,7 @@ typedef enum sdc_alg {
     SDC_ALG_HMAC_SHA256,
     SDC_ALG_HMAC_SHA512,
     SDC_ALG_X25519,
+    SDC_ALG_PBKDF2_SHA256,
     SDC_ALG__COUNT
 } sdc_alg;
 
@@ -104,7 +105,8 @@ typedef enum sdc_family {
     SDC_FAMILY_SIG,
     SDC_FAMILY_KEM,
     SDC_FAMILY_MAC,
-    SDC_FAMILY_KEX
+    SDC_FAMILY_KEX,
+    SDC_FAMILY_PBKDF
 } sdc_family;
 
 /* Fixed sizes of an algorithm, in bytes (0 = not applicable).
@@ -200,6 +202,14 @@ SDC_API sdc_status sdc_mac_verify(const sdc_ctx *ctx, sdc_alg alg,
                                   const uint8_t *key, size_t key_len,
                                   const uint8_t *msg, size_t msg_len,
                                   const uint8_t *tag, size_t tag_len);
+
+/* PBKDF2 (RFC 8018) password-based key derivation. iterations >= 1;
+ * use a random salt of at least 16 bytes and a high iteration count. */
+SDC_API sdc_status sdc_pbkdf2(const sdc_ctx *ctx, sdc_alg alg,
+                              const uint8_t *password, size_t password_len,
+                              const uint8_t *salt, size_t salt_len,
+                              uint32_t iterations,
+                              uint8_t *out, size_t out_len);
 
 SDC_API sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
                                    uint8_t *pk, size_t *pk_len,

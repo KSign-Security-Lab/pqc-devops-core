@@ -25,7 +25,7 @@ static void test_enumeration(void)
     CHECK(total == SDC_ALG__COUNT - 1, "total %zu", total);
     CHECK(sdc_alg_list(SDC_FAMILY_NONE, all, SDC_ALG__COUNT) == total, "%s", "fill");
     size_t sum = 0;
-    for (int f = SDC_FAMILY_AEAD; f <= SDC_FAMILY_KEX; f++) {
+    for (int f = SDC_FAMILY_AEAD; f <= SDC_FAMILY_PBKDF; f++) {
         sdc_alg buf[SDC_ALG__COUNT];
         size_t n = sdc_alg_list((sdc_family)f, buf, SDC_ALG__COUNT);
         CHECK(sdc_family_name((sdc_family)f) != NULL, "family %d named", f);
