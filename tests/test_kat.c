@@ -103,6 +103,23 @@ static const hkdf_kat HKDF[] = {
       "9d201395faa4b61a96c8" },
 };
 
+typedef struct {
+    sdc_alg alg;
+    const char *src, *pw, *salt;
+    uint32_t iter;
+    const char *dk;
+} pbkdf2_kat;
+
+static const pbkdf2_kat PBKDF2[] = {
+    /* RFC 7914 section 11 */
+    { SDC_ALG_PBKDF2_SHA256, "RFC7914 c=1", "706173737764", "73616c74", 1,
+      "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc"
+      "49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783" },
+    { SDC_ALG_PBKDF2_SHA256, "RFC7914 c=80000", "50617373776f7264", "4e61436c", 80000,
+      "4ddcd8f60b98be21830cee5ef22701f9641a4418d04c0414aeff08876b34ab56"
+      "a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d" },
+};
+
 typedef struct { sdc_alg alg; const char *src, *key, *msg, *tag; } mac_kat;
 
 static const mac_kat MAC[] = {
@@ -195,6 +212,15 @@ static void run_hkdf(const sdc_ctx *ctx, const char *prov, const hkdf_kat *v)
     CHECK(memcmp(D, E, ol) == 0, "%s %s okm mismatch", prov, v->src);
 }
 
+static void run_pbkdf2(const sdc_ctx *ctx, const char *prov, const pbkdf2_kat *v)
+{
+    size_t pl = unhex(v->pw, A, sizeof A), sl = unhex(v->salt, B, sizeof B);
+    size_t dl = unhex(v->dk, C, sizeof C);
+    CHECK_ST(sdc_pbkdf2(ctx, v->alg, A, pl, B, sl, v->iter, D, dl), SDC_OK,
+             "%s %s", prov, v->src);
+    CHECK(memcmp(C, D, dl) == 0, "%s %s derived key mismatch", prov, v->src);
+}
+
 static void run_mac(const sdc_ctx *ctx, const char *prov, const mac_kat *v)
 {
     size_t kl = unhex(v->key, A, sizeof A), ml = unhex(v->msg, B, sizeof B);
@@ -281,6 +307,7 @@ int main(void)
         RUN(HKDF, run_hkdf);
         RUN(SIG, run_sig);
         RUN(MAC, run_mac);
+        RUN(PBKDF2, run_pbkdf2);
         ran += run_x25519(ctx, prov);
         printf("  %-8s ran %d vectors\n", prov, ran);
         sdc_ctx_free(ctx);
