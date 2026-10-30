@@ -324,7 +324,8 @@ sdc_status sdc_pbkdf2(const sdc_ctx *ctx, sdc_alg alg,
     if (st != SDC_OK)
         return st;
     CHECK_IN(password, password_len);
-    CHECK_IN(salt, salt_len);
+    if (!salt || salt_len == 0) /* libgcrypt refuses empty salts; so do we */
+        return SDC_ERR_INVALID_ARG;
     /* cap lengths so every backend (some take int) can handle them */
     if (!out || out_len == 0 || out_len > (1u << 20) || iterations == 0 ||
         password_len > (1u << 20) || salt_len > (1u << 20))
