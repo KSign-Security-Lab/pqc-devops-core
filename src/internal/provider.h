@@ -57,6 +57,8 @@ typedef struct sdc_provider {
 
     /* pk/sk have pk_len/sk_len bytes. */
     sdc_status (*sig_keypair)(sdc_alg alg, uint8_t *pk, uint8_t *sk);
+    /* Optional: derive pk (pk_len bytes) from sk. */
+    sdc_status (*sig_public_key)(sdc_alg alg, const uint8_t *sk, uint8_t *pk);
     /* sig has sig_len (max) bytes; *sig_len receives the actual length. */
     sdc_status (*sign)(sdc_alg alg, const uint8_t *sk,
                        const uint8_t *msg, size_t msg_len,

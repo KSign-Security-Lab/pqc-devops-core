@@ -412,6 +412,23 @@ sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
     return keypair(ctx, alg, SDC_FAMILY_SIG, pk, pk_len, sk, sk_len);
 }
 
+sdc_status sdc_sig_public_key(const sdc_ctx *ctx, sdc_alg alg,
+                              const uint8_t *sk, size_t sk_len,
+                              uint8_t *pk, size_t *pk_len)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_SIG, OP(sig_public_key), &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    CHECK_FIXED(sk, sk_len, ai->sk_len);
+    CHECK_OUT(pk, pk_len, ai->pk_len);
+    st = p->sig_public_key(alg, sk, pk);
+    if (st == SDC_OK)
+        *pk_len = ai->pk_len;
+    return st;
+}
+
 sdc_status sdc_sign(const sdc_ctx *ctx, sdc_alg alg,
                     const uint8_t *sk, size_t sk_len,
                     const uint8_t *msg, size_t msg_len,
