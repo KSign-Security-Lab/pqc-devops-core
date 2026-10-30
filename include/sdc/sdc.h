@@ -215,6 +215,10 @@ SDC_API sdc_status sdc_pbkdf2(const sdc_ctx *ctx, sdc_alg alg,
 SDC_API sdc_status sdc_sig_keypair(const sdc_ctx *ctx, sdc_alg alg,
                                    uint8_t *pk, size_t *pk_len,
                                    uint8_t *sk, size_t *sk_len);
+/* Recompute the public key from a secret key (Ed25519, ECDSA-P256). */
+SDC_API sdc_status sdc_sig_public_key(const sdc_ctx *ctx, sdc_alg alg,
+                                      const uint8_t *sk, size_t sk_len,
+                                      uint8_t *pk, size_t *pk_len);
 SDC_API sdc_status sdc_sign(const sdc_ctx *ctx, sdc_alg alg,
                             const uint8_t *sk, size_t sk_len,
                             const uint8_t *msg, size_t msg_len,
