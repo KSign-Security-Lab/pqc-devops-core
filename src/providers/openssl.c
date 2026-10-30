@@ -289,6 +289,22 @@ static sdc_status ossl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
     return st;
 }
 
+static sdc_status ossl_sig_public_key(sdc_alg alg, const uint8_t *sk, uint8_t *pk)
+{
+    if (alg == SDC_ALG_ED25519) {
+        size_t pl = 32;
+        sdc_status st = SDC_ERR_PROVIDER;
+        EVP_PKEY *pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, sk, 32);
+        if (pkey && EVP_PKEY_get_raw_public_key(pkey, pk, &pl) == 1 && pl == 32)
+            st = SDC_OK;
+        EVP_PKEY_free(pkey);
+        return st;
+    }
+    if (alg == SDC_ALG_ECDSA_P256_SHA256)
+        return ec_pub_from_priv(sk, pk) ? SDC_OK : SDC_ERR_INVALID_ARG;
+    return SDC_ERR_UNSUPPORTED;
+}
+
 static sdc_status digest_sign(EVP_PKEY *pkey, const EVP_MD *md,
                               const uint8_t *msg, size_t msg_len,
                               uint8_t *sig, size_t *sig_len)
@@ -439,6 +455,7 @@ const sdc_provider sdc_provider_openssl = {
     .mac          = ossl_mac,
     .pbkdf2       = ossl_pbkdf2,
     .sig_keypair  = ossl_sig_keypair,
+    .sig_public_key = ossl_sig_public_key,
     .sign         = ossl_sign,
     .verify       = ossl_verify,
     .kex_keypair  = ossl_kex_keypair,
