@@ -77,12 +77,12 @@ static void mac(sdc_alg alg, size_t x, size_t y)
 static void pbkdf(sdc_alg alg, size_t x, size_t y)
 {
     uint8_t a[100], b[100];
-    /* empty password and salt are legal inputs and must agree too */
+    /* an empty password is legal and must agree too */
     for (size_t pl = 0; pl <= 20; pl += 20) {
-        CHECK_ST(sdc_pbkdf2(ctxs[x], alg, pl ? msg : NULL, pl, pl ? msg + 20 : NULL, pl,
+        CHECK_ST(sdc_pbkdf2(ctxs[x], alg, pl ? msg : NULL, pl, msg + 20, 16,
                             3, a, sizeof a), SDC_OK, "%s %s pw %zu", sdc_alg_name(alg),
                  names[x], pl);
-        CHECK_ST(sdc_pbkdf2(ctxs[y], alg, pl ? msg : NULL, pl, pl ? msg + 20 : NULL, pl,
+        CHECK_ST(sdc_pbkdf2(ctxs[y], alg, pl ? msg : NULL, pl, msg + 20, 16,
                             3, b, sizeof b), SDC_OK, "%s %s pw %zu", sdc_alg_name(alg),
                  names[y], pl);
         CHECK(memcmp(a, b, sizeof a) == 0, "%s %s vs %s pw %zu", sdc_alg_name(alg),

@@ -136,6 +136,8 @@ static void test_validation(void)
                  SDC_ERR_INVALID_ARG, "%s", "pbkdf2 zero iterations");
         CHECK_ST(sdc_pbkdf2(NULL, SDC_ALG_PBKDF2_SHA256, pt, 4, pt, 4, 1, buf, 0),
                  SDC_ERR_INVALID_ARG, "%s", "pbkdf2 empty output");
+        CHECK_ST(sdc_pbkdf2(NULL, SDC_ALG_PBKDF2_SHA256, pt, 4, NULL, 0, 1, buf, 32),
+                 SDC_ERR_INVALID_ARG, "%s", "pbkdf2 empty salt");
         CHECK_ST(sdc_pbkdf2(NULL, SDC_ALG_HKDF_SHA256, pt, 4, pt, 4, 1, buf, 32),
                  SDC_ERR_INVALID_ARG, "%s", "pbkdf2 with HKDF alg");
     }

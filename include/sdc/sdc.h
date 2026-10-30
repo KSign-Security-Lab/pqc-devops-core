@@ -203,8 +203,9 @@ SDC_API sdc_status sdc_mac_verify(const sdc_ctx *ctx, sdc_alg alg,
                                   const uint8_t *msg, size_t msg_len,
                                   const uint8_t *tag, size_t tag_len);
 
-/* PBKDF2 (RFC 8018) password-based key derivation. iterations >= 1;
- * use a random salt of at least 16 bytes and a high iteration count. */
+/* PBKDF2 (RFC 8018) password-based key derivation. iterations >= 1 and a
+ * non-empty salt are required; use a random salt of at least 16 bytes and a
+ * high iteration count. */
 SDC_API sdc_status sdc_pbkdf2(const sdc_ctx *ctx, sdc_alg alg,
                               const uint8_t *password, size_t password_len,
                               const uint8_t *salt, size_t salt_len,
