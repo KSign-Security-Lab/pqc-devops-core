@@ -317,6 +317,32 @@ static sdc_status ntl_sig_keypair(sdc_alg alg, uint8_t *pk, uint8_t *sk)
     return SDC_OK;
 }
 
+static sdc_status ntl_sig_public_key(sdc_alg alg, const uint8_t *sk, uint8_t *pk)
+{
+    if (alg == SDC_ALG_ED25519) {
+        ed25519_sha512_public_key(pk, sk);
+        return SDC_OK;
+    }
+    sdc_status st = SDC_ERR_INVALID_ARG;
+    const struct ecc_curve *curve = nettle_get_secp_256r1();
+    struct ecc_scalar key;
+    struct ecc_point pub;
+    mpz_t d;
+    ecc_scalar_init(&key, curve);
+    ecc_point_init(&pub, curve);
+    mpz_init(d);
+    mpz_import(d, 32, 1, 1, 1, 0, sk);
+    if (ecc_scalar_set(&key, d)) {
+        ecc_point_mul_g(&pub, &key);
+        ecc_pub_to_raw(&pub, pk);
+        st = SDC_OK;
+    }
+    mpz_clear(d);
+    ecc_point_clear(&pub);
+    ecc_scalar_clear(&key);
+    return st;
+}
+
 static sdc_status ntl_sign(sdc_alg alg, const uint8_t *sk,
                            const uint8_t *msg, size_t msg_len,
                            uint8_t *sig, size_t *sig_len)
@@ -411,6 +437,7 @@ const sdc_provider sdc_provider_nettle = {
     .mac          = ntl_mac,
     .pbkdf2       = ntl_pbkdf2,
     .sig_keypair  = ntl_sig_keypair,
+    .sig_public_key = ntl_sig_public_key,
     .sign         = ntl_sign,
     .verify       = ntl_verify,
     .kex_keypair  = ntl_kex_keypair,
