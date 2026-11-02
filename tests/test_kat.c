@@ -246,6 +246,12 @@ static void run_sig(const sdc_ctx *ctx, const char *prov, const sig_kat *v)
              "%s %s verify known sig", prov, v->src);
 
     size_t n = sizeof E;
+    sdc_status st = sdc_sig_public_key(ctx, v->alg, A, skl, E, &n);
+    if (st != SDC_ERR_NO_PROVIDER) /* optional operation */
+        CHECK(st == SDC_OK && n == pkl && memcmp(E, B, pkl) == 0,
+              "%s %s public key derivation (%s)", prov, v->src, sdc_strerror(st));
+
+    n = sizeof E;
     CHECK_ST(sdc_sign(ctx, v->alg, A, skl, C, ml, E, &n), SDC_OK, "%s %s sign", prov, v->src);
     if (v->alg == SDC_ALG_ED25519)
         CHECK(n == gl && memcmp(D, E, gl) == 0, "%s %s signature mismatch", prov, v->src);
