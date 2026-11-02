@@ -88,6 +88,30 @@ static void test_contexts(void)
     }
 }
 
+/* gcrypt implements Ed25519 but not public-key derivation: a context that
+ * prefers gcrypt must fall through to the next provider for that one
+ * operation only. */
+static void test_per_operation_fallback(void)
+{
+    if (!sdc_provider_supports("gcrypt", SDC_ALG_ED25519) ||
+        !sdc_provider_supports("nettle", SDC_ALG_ED25519))
+        return;
+    sdc_ctx *only, *both;
+    uint8_t sk[32] = {1}, pk[32];
+    size_t n = sizeof pk;
+    CHECK_ST(sdc_ctx_new(&only, "gcrypt"), SDC_OK, "%s", "gcrypt ctx");
+    CHECK_ST(sdc_ctx_new(&both, "gcrypt,nettle"), SDC_OK, "%s", "gcrypt,nettle ctx");
+    CHECK_ST(sdc_sig_public_key(only, SDC_ALG_ED25519, sk, 32, pk, &n),
+             SDC_ERR_NO_PROVIDER, "%s", "gcrypt alone cannot derive");
+    n = sizeof pk;
+    CHECK_ST(sdc_sig_public_key(both, SDC_ALG_ED25519, sk, 32, pk, &n), SDC_OK,
+             "%s", "falls through to nettle");
+    CHECK(strcmp(sdc_ctx_provider_for(both, SDC_ALG_ED25519), "gcrypt") == 0,
+          "%s", "gcrypt still preferred for the algorithm");
+    sdc_ctx_free(only);
+    sdc_ctx_free(both);
+}
+
 static void test_validation(void)
 {
     uint8_t key[32] = {0}, nonce[12] = {0}, buf[64], pt[4] = {1, 2, 3, 4};
@@ -160,6 +184,7 @@ int main(void)
     test_alg_table();
     test_enumeration();
     test_contexts();
+    test_per_operation_fallback();
     test_validation();
     sdc_cleanup();
     return test_summary("test_api");
