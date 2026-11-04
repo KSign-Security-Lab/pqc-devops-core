@@ -184,6 +184,14 @@ SDC_API sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
                             const uint8_t *in, size_t in_len,
                             uint8_t *out, size_t *out_len);
 
+/* Incremental hashing for data that does not fit in memory.
+ * sdc_hash_final may be called once; free the context afterwards. */
+typedef struct sdc_hash_ctx sdc_hash_ctx;
+SDC_API sdc_status sdc_hash_init(const sdc_ctx *ctx, sdc_alg alg, sdc_hash_ctx **h);
+SDC_API sdc_status sdc_hash_update(sdc_hash_ctx *h, const uint8_t *in, size_t in_len);
+SDC_API sdc_status sdc_hash_final(sdc_hash_ctx *h, uint8_t *out, size_t *out_len);
+SDC_API void       sdc_hash_free(sdc_hash_ctx *h);
+
 /* HKDF (RFC 5869) extract+expand. out_len <= 255 * digest_len. */
 SDC_API sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
                             const uint8_t *ikm, size_t ikm_len,
