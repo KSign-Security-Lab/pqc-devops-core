@@ -153,6 +153,28 @@ static sdc_status ossl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
                ? SDC_OK : SDC_ERR_PROVIDER;
 }
 
+static void *ossl_hash_new(sdc_alg alg)
+{
+    EVP_MD_CTX *mc = EVP_MD_CTX_new();
+    if (mc && EVP_DigestInit_ex(mc, md_for(alg), NULL) != 1) {
+        EVP_MD_CTX_free(mc);
+        mc = NULL;
+    }
+    return mc;
+}
+
+static sdc_status ossl_hash_update(void *state, const uint8_t *in, size_t in_len)
+{
+    return EVP_DigestUpdate(state, in, in_len) == 1 ? SDC_OK : SDC_ERR_PROVIDER;
+}
+
+static sdc_status ossl_hash_final(void *state, uint8_t *out)
+{
+    return EVP_DigestFinal_ex(state, out, NULL) == 1 ? SDC_OK : SDC_ERR_PROVIDER;
+}
+
+static void ossl_hash_free(void *state) { EVP_MD_CTX_free(state); }
+
 static sdc_status ossl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
                             const uint8_t *salt, size_t salt_len,
                             const uint8_t *info, size_t info_len,
@@ -451,6 +473,10 @@ const sdc_provider sdc_provider_openssl = {
     .aead_encrypt   = ossl_aead_encrypt,
     .aead_decrypt   = ossl_aead_decrypt,
     .hash           = ossl_hash,
+    .hash_new       = ossl_hash_new,
+    .hash_update    = ossl_hash_update,
+    .hash_final     = ossl_hash_final,
+    .hash_free      = ossl_hash_free,
     .hkdf           = ossl_hkdf,
     .mac            = ossl_mac,
     .pbkdf2         = ossl_pbkdf2,
