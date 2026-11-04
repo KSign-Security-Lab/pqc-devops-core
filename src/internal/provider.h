@@ -42,6 +42,12 @@ typedef struct sdc_provider {
     sdc_status (*hash)(sdc_alg alg, const uint8_t *in, size_t in_len,
                        uint8_t *out);
 
+    /* Optional incremental hashing. hash_new returns NULL on failure. */
+    void      *(*hash_new)(sdc_alg alg);
+    sdc_status (*hash_update)(void *state, const uint8_t *in, size_t in_len);
+    sdc_status (*hash_final)(void *state, uint8_t *out);
+    void       (*hash_free)(void *state);
+
     sdc_status (*hkdf)(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
                        const uint8_t *salt, size_t salt_len,
                        const uint8_t *info, size_t info_len,

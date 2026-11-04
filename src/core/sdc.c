@@ -290,6 +290,65 @@ sdc_status sdc_hash(const sdc_ctx *ctx, sdc_alg alg,
     return st;
 }
 
+struct sdc_hash_ctx {
+    const sdc_provider *p;
+    const sdc_alg_info *ai;
+    void *state;
+    int finished;
+};
+
+sdc_status sdc_hash_init(const sdc_ctx *ctx, sdc_alg alg, sdc_hash_ctx **h)
+{
+    const sdc_alg_info *ai;
+    const sdc_provider *p;
+    if (!h)
+        return SDC_ERR_INVALID_ARG;
+    *h = NULL;
+    sdc_status st = prepare(ctx, alg, SDC_FAMILY_HASH, OP(hash_new), &ai, &p);
+    if (st != SDC_OK)
+        return st;
+    sdc_hash_ctx *c = calloc(1, sizeof(*c));
+    if (!c)
+        return SDC_ERR_NOMEM;
+    c->p = p;
+    c->ai = ai;
+    c->state = p->hash_new(alg);
+    if (!c->state) {
+        free(c);
+        return SDC_ERR_PROVIDER;
+    }
+    *h = c;
+    return SDC_OK;
+}
+
+sdc_status sdc_hash_update(sdc_hash_ctx *h, const uint8_t *in, size_t in_len)
+{
+    if (!h || h->finished)
+        return SDC_ERR_INVALID_ARG;
+    CHECK_IN(in, in_len);
+    return in_len ? h->p->hash_update(h->state, in, in_len) : SDC_OK;
+}
+
+sdc_status sdc_hash_final(sdc_hash_ctx *h, uint8_t *out, size_t *out_len)
+{
+    if (!h || h->finished)
+        return SDC_ERR_INVALID_ARG;
+    CHECK_OUT(out, out_len, h->ai->digest_len);
+    sdc_status st = h->p->hash_final(h->state, out);
+    h->finished = 1;
+    if (st == SDC_OK)
+        *out_len = h->ai->digest_len;
+    return st;
+}
+
+void sdc_hash_free(sdc_hash_ctx *h)
+{
+    if (!h)
+        return;
+    h->p->hash_free(h->state);
+    free(h);
+}
+
 sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
                     const uint8_t *ikm, size_t ikm_len,
                     const uint8_t *salt, size_t salt_len,
