@@ -14,6 +14,7 @@
 #include <nettle/hkdf.h>
 #include <nettle/hmac.h>
 #include <nettle/memops.h>
+#include <nettle/nettle-meta.h>
 #include <nettle/pbkdf2.h>
 #include <nettle/sha2.h>
 #include <nettle/sha3.h>
@@ -188,6 +189,59 @@ static sdc_status ntl_hash(sdc_alg alg, const uint8_t *in, size_t in_len,
         return SDC_ERR_UNSUPPORTED;
     }
     return SDC_OK;
+}
+
+/* Incremental hashing through Nettle's generic hash descriptors. */
+struct ntl_hash_state {
+    const struct nettle_hash *h;
+    uint8_t ctx[]; /* h->context_size bytes */
+};
+
+static const struct nettle_hash *ntl_meta(sdc_alg alg)
+{
+    switch (alg) {
+    case SDC_ALG_SHA224:   return &nettle_sha224;
+    case SDC_ALG_SHA256:   return &nettle_sha256;
+    case SDC_ALG_SHA384:   return &nettle_sha384;
+    case SDC_ALG_SHA512:   return &nettle_sha512;
+    case SDC_ALG_SHA3_256: return &nettle_sha3_256;
+    case SDC_ALG_SHA3_384: return &nettle_sha3_384;
+    case SDC_ALG_SHA3_512: return &nettle_sha3_512;
+    default:               return NULL;
+    }
+}
+
+static void *ntl_hash_new(sdc_alg alg)
+{
+    const struct nettle_hash *h = ntl_meta(alg);
+    struct ntl_hash_state *s = h ? malloc(sizeof(*s) + h->context_size) : NULL;
+    if (s) {
+        s->h = h;
+        h->init(s->ctx);
+    }
+    return s;
+}
+
+static sdc_status ntl_hash_update(void *state, const uint8_t *in, size_t in_len)
+{
+    struct ntl_hash_state *s = state;
+    s->h->update(s->ctx, in_len, in);
+    return SDC_OK;
+}
+
+static sdc_status ntl_hash_final(void *state, uint8_t *out)
+{
+    struct ntl_hash_state *s = state;
+    s->h->digest(s->ctx, s->h->digest_size, out);
+    return SDC_OK;
+}
+
+static void ntl_hash_free(void *state)
+{
+    struct ntl_hash_state *s = state;
+    if (s)
+        sdc_memzero(s->ctx, s->h->context_size);
+    free(s);
 }
 
 static sdc_status ntl_hkdf(sdc_alg alg, const uint8_t *ikm, size_t ikm_len,
@@ -433,6 +487,10 @@ const sdc_provider sdc_provider_nettle = {
     .aead_encrypt   = ntl_aead_encrypt,
     .aead_decrypt   = ntl_aead_decrypt,
     .hash           = ntl_hash,
+    .hash_new       = ntl_hash_new,
+    .hash_update    = ntl_hash_update,
+    .hash_final     = ntl_hash_final,
+    .hash_free      = ntl_hash_free,
     .hkdf           = ntl_hkdf,
     .mac            = ntl_mac,
     .pbkdf2         = ntl_pbkdf2,
