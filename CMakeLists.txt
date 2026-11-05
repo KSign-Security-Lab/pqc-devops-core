@@ -32,7 +32,8 @@ add_library(sdc_objs OBJECT
   src/core/sdc.c
   src/core/registry.c
   src/core/alg_table.c
-  src/core/encoding.c)
+  src/core/encoding.c
+  src/core/hybrid.c)
 target_include_directories(sdc_objs
   PUBLIC  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   PRIVATE ${PROJECT_SOURCE_DIR}/src)
