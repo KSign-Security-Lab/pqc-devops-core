@@ -94,6 +94,9 @@ typedef enum sdc_alg {
     SDC_ALG_HMAC_SHA512,
     SDC_ALG_X25519,
     SDC_ALG_PBKDF2_SHA256,
+    /* Hybrid KEM composed in the core from X25519 and ML-KEM-768
+     * (experimental; not wire-compatible with X-Wing). */
+    SDC_ALG_X25519_ML_KEM_768,
     SDC_ALG__COUNT
 } sdc_alg;
 
