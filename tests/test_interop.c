@@ -50,6 +50,33 @@ static void digest(sdc_alg alg, size_t x, size_t y)
     CHECK(na == nb && memcmp(a, b, na) == 0, "%s %s vs %s", sdc_alg_name(alg), names[x], names[y]);
 }
 
+/* Streaming in odd-sized chunks must match the one-shot digest. */
+static void digest_stream(sdc_alg alg, size_t x)
+{
+    static const size_t chunks[] = {1, 7, 64, 129, 1000};
+    uint8_t want[64], got[64];
+    size_t nw = sizeof want;
+    CHECK_ST(sdc_hash(ctxs[x], alg, msg, sizeof msg, want, &nw), SDC_OK, "%s", "one-shot");
+    for (size_t c = 0; c < sizeof chunks / sizeof chunks[0]; c++) {
+        sdc_hash_ctx *h;
+        size_t ng = sizeof got;
+        if (sdc_hash_init(ctxs[x], alg, &h) != SDC_OK) {
+            CHECK(0, "%s %s hash_init", sdc_alg_name(alg), names[x]);
+            return;
+        }
+        for (size_t off = 0; off < sizeof msg; off += chunks[c]) {
+            size_t n = sizeof msg - off < chunks[c] ? sizeof msg - off : chunks[c];
+            sdc_hash_update(h, msg + off, n);
+        }
+        CHECK_ST(sdc_hash_final(h, got, &ng), SDC_OK, "%s final", sdc_alg_name(alg));
+        CHECK(ng == nw && memcmp(got, want, nw) == 0, "%s %s chunk %zu",
+              sdc_alg_name(alg), names[x], chunks[c]);
+        CHECK_ST(sdc_hash_update(h, msg, 1), SDC_ERR_INVALID_ARG, "%s", "update after final");
+        CHECK_ST(sdc_hash_final(h, got, &ng), SDC_ERR_INVALID_ARG, "%s", "double final");
+        sdc_hash_free(h);
+    }
+}
+
 static void kdf(sdc_alg alg, size_t x, size_t y)
 {
     uint8_t a[300], b[300];
@@ -186,7 +213,11 @@ int main(void)
                 pairs++;
                 switch (ai.family) {
                 case SDC_FAMILY_AEAD: aead(alg, x, y); break;
-                case SDC_FAMILY_HASH: digest(alg, x, y); break;
+                case SDC_FAMILY_HASH:
+                    digest(alg, x, y);
+                    if (x == y)
+                        digest_stream(alg, x);
+                    break;
                 case SDC_FAMILY_KDF:  kdf(alg, x, y); break;
                 case SDC_FAMILY_SIG:  sig(alg, x, y); break;
                 case SDC_FAMILY_KEM:  kem(alg, x, y); break;
