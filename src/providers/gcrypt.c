@@ -179,6 +179,31 @@ static sdc_status gc_pbkdf2(sdc_alg alg, const uint8_t *pw, size_t pw_len,
                ? SDC_ERR_PROVIDER : SDC_OK;
 }
 
+static void *gc_hash_new(sdc_alg alg)
+{
+    gcry_md_hd_t h;
+    return gcry_md_open(&h, md_algo(alg), 0) ? NULL : h;
+}
+
+static sdc_status gc_hash_update(void *state, const uint8_t *in, size_t in_len)
+{
+    gcry_md_write(state, in, in_len);
+    return SDC_OK;
+}
+
+static sdc_status gc_hash_final(void *state, uint8_t *out)
+{
+    gcry_md_hd_t h = state;
+    int algo = gcry_md_get_algo(h);
+    const unsigned char *d = gcry_md_read(h, algo);
+    if (!d)
+        return SDC_ERR_PROVIDER;
+    memcpy(out, d, gcry_md_get_algo_dlen(algo));
+    return SDC_OK;
+}
+
+static void gc_hash_free(void *state) { gcry_md_close(state); }
+
 /* ------------------------------------------------------------- signatures */
 
 /* Copy an S-expression token's value into a fixed big-endian buffer. */
@@ -381,6 +406,10 @@ const sdc_provider sdc_provider_gcrypt = {
     .aead_encrypt = gc_aead_encrypt,
     .aead_decrypt = gc_aead_decrypt,
     .hash         = gc_hash,
+    .hash_new     = gc_hash_new,
+    .hash_update  = gc_hash_update,
+    .hash_final   = gc_hash_final,
+    .hash_free    = gc_hash_free,
     .mac          = gc_mac,
     .pbkdf2       = gc_pbkdf2,
     .sig_keypair  = gc_sig_keypair,
