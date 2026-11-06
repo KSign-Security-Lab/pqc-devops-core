@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "internal/hybrid.h"
 #include "internal/provider.h"
 
 #define SDC_MAX_PROVIDERS 16
@@ -166,6 +167,8 @@ const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
 {
     if (!sdc__alg_info(alg))
         return NULL;
+    if (alg == SDC_ALG_X25519_ML_KEM_768)
+        return sdc__hybrid_available(ctx) ? "core" : NULL;
     const sdc_provider *p = pick(ctx, alg, NO_OP);
     return p ? p->name : NULL;
 }
@@ -182,6 +185,11 @@ static sdc_status prepare(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
         return SDC_ERR_UNSUPPORTED;
     if ((*ai)->family != fam)
         return SDC_ERR_INVALID_ARG;
+    if (alg == SDC_ALG_X25519_ML_KEM_768) {
+        /* composed in the core: no single provider, signalled by *p == NULL */
+        *p = NULL;
+        return sdc__hybrid_available(ctx) ? SDC_OK : SDC_ERR_NO_PROVIDER;
+    }
     *p = pick(ctx, alg, op);
     return *p ? SDC_OK : SDC_ERR_NO_PROVIDER;
 }
@@ -452,7 +460,8 @@ static sdc_status keypair(const sdc_ctx *ctx, sdc_alg alg, sdc_family fam,
     }
     if (!pk || !sk)
         return SDC_ERR_INVALID_ARG;
-    st = fam == SDC_FAMILY_SIG ? p->sig_keypair(alg, pk, sk)
+    st = !p                    ? sdc__hybrid_keypair(ctx, pk, sk)
+       : fam == SDC_FAMILY_SIG ? p->sig_keypair(alg, pk, sk)
        : fam == SDC_FAMILY_KEM ? p->kem_keypair(alg, pk, sk)
                                : p->kex_keypair(alg, pk, sk);
     if (st == SDC_OK) {
@@ -554,7 +563,7 @@ sdc_status sdc_kem_encaps(const sdc_ctx *ctx, sdc_alg alg,
     }
     if (!ct || !ss)
         return SDC_ERR_INVALID_ARG;
-    st = p->kem_encaps(alg, pk, ct, ss);
+    st = p ? p->kem_encaps(alg, pk, ct, ss) : sdc__hybrid_encaps(ctx, pk, ct, ss);
     if (st == SDC_OK) {
         *ct_len = ai->ct_len;
         *ss_len = ai->ss_len;
@@ -577,7 +586,7 @@ sdc_status sdc_kem_decaps(const sdc_ctx *ctx, sdc_alg alg,
     CHECK_FIXED(sk, sk_len, ai->sk_len);
     CHECK_FIXED(ct, ct_len, ai->ct_len);
     CHECK_OUT(ss, ss_len, ai->ss_len);
-    st = p->kem_decaps(alg, sk, ct, ss);
+    st = p ? p->kem_decaps(alg, sk, ct, ss) : sdc__hybrid_decaps(ctx, sk, ct, ss);
     if (st == SDC_OK)
         *ss_len = ai->ss_len;
     else
