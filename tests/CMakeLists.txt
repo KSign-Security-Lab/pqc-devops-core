@@ -1,4 +1,4 @@
-foreach(t test_api test_kat test_interop test_encoding)
+foreach(t test_api test_kat test_interop test_encoding test_hybrid)
   add_executable(${t} ${t}.c)
   target_link_libraries(${t} PRIVATE sdc_static)
   add_test(NAME ${t} COMMAND ${t})
