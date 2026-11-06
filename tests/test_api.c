@@ -112,6 +112,40 @@ static void test_per_operation_fallback(void)
     sdc_ctx_free(both);
 }
 
+static void test_pqc_negative(void)
+{
+    if (!sdc_ctx_provider_for(NULL, SDC_ALG_ML_DSA_44) ||
+        !sdc_ctx_provider_for(NULL, SDC_ALG_ML_KEM_512))
+        return;
+    static uint8_t pk[1312], sk[2560], sig[2420], ct[768], ss[32];
+    static const uint8_t m[] = "message";
+    size_t pl = sizeof pk, sl = sizeof sk, gl = sizeof sig, cl = sizeof ct, n = 32;
+
+    CHECK_ST(sdc_sig_keypair(NULL, SDC_ALG_ML_DSA_44, pk, &pl, sk, &sl), SDC_OK, "%s", "ML-DSA kp");
+    CHECK_ST(sdc_sign(NULL, SDC_ALG_ML_DSA_44, sk, sl - 1, m, sizeof m, sig, &gl),
+             SDC_ERR_INVALID_ARG, "%s", "short ML-DSA sk");
+    gl = sizeof sig;
+    CHECK_ST(sdc_sign(NULL, SDC_ALG_ML_DSA_44, sk, sl, m, sizeof m, sig, &gl), SDC_OK, "%s", "sign");
+    CHECK_ST(sdc_verify(NULL, SDC_ALG_ML_DSA_44, pk, pl, m, sizeof m, sig, gl - 1),
+             SDC_ERR_VERIFY_FAILED, "%s", "truncated ML-DSA sig");
+    CHECK_ST(sdc_verify(NULL, SDC_ALG_ML_DSA_44, pk, pl, m, sizeof m - 1, sig, gl),
+             SDC_ERR_VERIFY_FAILED, "%s", "different message");
+    CHECK_ST(sdc_verify(NULL, SDC_ALG_ML_DSA_44, pk, pl - 1, m, sizeof m, sig, gl),
+             SDC_ERR_INVALID_ARG, "%s", "short ML-DSA pk");
+
+    pl = 800, sl = 1632;
+    CHECK_ST(sdc_kem_keypair(NULL, SDC_ALG_ML_KEM_512, pk, &pl, sk, &sl), SDC_OK, "%s", "ML-KEM kp");
+    CHECK_ST(sdc_kem_encaps(NULL, SDC_ALG_ML_KEM_512, pk, pl, ct, &cl, ss, &n), SDC_OK, "%s", "enc");
+    n = 32;
+    CHECK_ST(sdc_kem_decaps(NULL, SDC_ALG_ML_KEM_512, sk, sl, ct, cl - 1, ss, &n),
+             SDC_ERR_INVALID_ARG, "%s", "short ML-KEM ct");
+    cl = 10;
+    n = 32;
+    CHECK_ST(sdc_kem_encaps(NULL, SDC_ALG_ML_KEM_512, pk, pl, ct, &cl, ss, &n),
+             SDC_ERR_BUFFER_TOO_SMALL, "%s", "small ct buffer");
+    CHECK(cl == 768, "required ct size %zu", cl);
+}
+
 static void test_validation(void)
 {
     uint8_t key[32] = {0}, nonce[12] = {0}, buf[64], pt[4] = {1, 2, 3, 4};
@@ -186,6 +220,7 @@ int main(void)
     test_contexts();
     test_per_operation_fallback();
     test_validation();
+    test_pqc_negative();
     sdc_cleanup();
     return test_summary("test_api");
 }
