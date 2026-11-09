@@ -53,6 +53,36 @@ static void encrypt_file(const sdc_ctx *ctx, sdc_alg aead, uint32_t iter,
     free(buf);
 }
 
+static void decrypt_file(const sdc_ctx *ctx, const char *password,
+                         const char *in, const char *out)
+{
+    size_t cl;
+    uint8_t *ct = read_file(in, &cl), key[32];
+    sdc_alg_info ai;
+    if (cl < HDR_LEN || memcmp(ct, "SDCF", 4) != 0 || ct[4] != 1)
+        die("%s: not an sdc_filecrypt v1 file", in);
+    if (sdc_alg_get_info((sdc_alg)ct[5], &ai) != SDC_OK || ai.family != SDC_FAMILY_AEAD)
+        die("%s: unknown AEAD id %u", in, ct[5]);
+    uint32_t iter = (uint32_t)ct[6] << 24 | (uint32_t)ct[7] << 16 |
+                    (uint32_t)ct[8] << 8 | ct[9];
+    if (iter == 0)
+        die("%s: invalid iteration count", in);
+
+    derive_key(ctx, password, ct + 10, iter, key, ai.key_len);
+    size_t pl = cl - HDR_LEN;
+    uint8_t *pt = xmalloc(pl);
+    sdc_status st = sdc_aead_decrypt(ctx, ai.alg, key, ai.key_len, ct + 26, 12, ct, HDR_LEN,
+                                     ct + HDR_LEN, cl - HDR_LEN, pt, &pl);
+    sdc_memzero(key, sizeof key);
+    if (st == SDC_ERR_AUTH_FAILED)
+        die("%s: wrong password or corrupted file", in);
+    must(st, "sdc_aead_decrypt");
+    write_file(out, pt, pl);
+    sdc_memzero(pt, pl);
+    free(pt);
+    free(ct);
+}
+
 int main(int argc, char **argv)
 {
     sdc_alg aead = SDC_ALG_AES_256_GCM;
@@ -76,6 +106,8 @@ int main(int argc, char **argv)
     must(sdc_ctx_new(&ctx, NULL), "sdc_ctx_new");
     if (strcmp(argv[1], "enc") == 0)
         encrypt_file(ctx, aead, iter, argv[i], argv[i + 1], argv[i + 2]);
+    else if (strcmp(argv[1], "dec") == 0)
+        decrypt_file(ctx, argv[i], argv[i + 1], argv[i + 2]);
     else
         goto usage;
     sdc_ctx_free(ctx);
