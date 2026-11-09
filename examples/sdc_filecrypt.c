@@ -16,6 +16,7 @@
 
 #define HDR_LEN 38
 #define DEFAULT_ITER 600000u
+#define MAX_ITER 10000000u /* bound work done for untrusted input files */
 
 static void derive_key(const sdc_ctx *ctx, const char *password, const uint8_t *salt,
                        uint32_t iter, uint8_t *key, size_t key_len)
@@ -65,8 +66,8 @@ static void decrypt_file(const sdc_ctx *ctx, const char *password,
         die("%s: unknown AEAD id %u", in, ct[5]);
     uint32_t iter = (uint32_t)ct[6] << 24 | (uint32_t)ct[7] << 16 |
                     (uint32_t)ct[8] << 8 | ct[9];
-    if (iter == 0)
-        die("%s: invalid iteration count", in);
+    if (iter == 0 || iter > MAX_ITER)
+        die("%s: invalid iteration count %u", in, iter);
 
     derive_key(ctx, password, ct + 10, iter, key, ai.key_len);
     size_t pl = cl - HDR_LEN;
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
             goto usage;
         i += 2;
     }
-    if (argc - i != 3 || iter == 0)
+    if (argc - i != 3 || iter == 0 || iter > MAX_ITER)
         goto usage;
 
     sdc_ctx *ctx;
