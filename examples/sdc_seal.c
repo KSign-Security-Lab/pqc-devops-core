@@ -39,6 +39,39 @@ static void keygen(const sdc_ctx *ctx, sdc_alg kem, const char *pk_path, const c
     free(sk);
 }
 
+#define HDR 6
+static const uint8_t INFO[] = "sdc_seal v1";
+static const uint8_t ZERO_NONCE[12];
+
+static void aead_key(const sdc_ctx *ctx, const uint8_t *ss, size_t ss_len, uint8_t key[32])
+{
+    must(sdc_hkdf(ctx, SDC_ALG_HKDF_SHA256, ss, ss_len, NULL, 0, INFO, sizeof INFO - 1,
+                  key, 32), "sdc_hkdf");
+}
+
+static void seal(const sdc_ctx *ctx, const char *pk_path, const char *in, const char *out)
+{
+    sdc_alg kem;
+    sdc_alg_info ai;
+    size_t pkl, pl;
+    uint8_t *pk = read_key(pk_path, &pkl, &kem, 0), *pt = read_file(in, &pl);
+    sdc_alg_get_info(kem, &ai);
+    size_t total = HDR + ai.ct_len + pl + 16, cl = ai.ct_len, sl = 32, ol = pl + 16;
+    uint8_t *buf = xmalloc(total), ss[32], key[32];
+
+    memcpy(buf, "SDCS", 4);
+    buf[4] = 1;
+    buf[5] = (uint8_t)kem;
+    must(sdc_kem_encaps(ctx, kem, pk + 1, pkl, buf + HDR, &cl, ss, &sl), "sdc_kem_encaps");
+    aead_key(ctx, ss, sl, key);
+    must(sdc_aead_encrypt(ctx, SDC_ALG_AES_256_GCM, key, 32, ZERO_NONCE, 12,
+                          buf, HDR + cl, pt, pl, buf + HDR + cl, &ol), "sdc_aead_encrypt");
+    write_file(out, buf, HDR + cl + ol);
+    sdc_memzero(ss, sizeof ss);
+    sdc_memzero(key, sizeof key);
+    free(pk); free(pt); free(buf);
+}
+
 int main(int argc, char **argv)
 {
     sdc_ctx *ctx;
@@ -53,6 +86,8 @@ int main(int argc, char **argv)
     must(sdc_ctx_new(&ctx, NULL), "sdc_ctx_new");
     if (strcmp(argv[1], "keygen") == 0 && argc - i == 2)
         keygen(ctx, kem, argv[i], argv[i + 1]);
+    else if (strcmp(argv[1], "seal") == 0 && argc - i == 3)
+        seal(ctx, argv[i], argv[i + 1], argv[i + 2]);
     else
         goto usage;
     sdc_ctx_free(ctx);
