@@ -79,10 +79,14 @@ static void open_sealed(const sdc_ctx *ctx, const char *sk_path, const char *in,
     size_t skl, cl;
     uint8_t *sk = read_key(sk_path, &skl, &kem, 1), *ct = read_file(in, &cl);
     sdc_alg_get_info(kem, &ai);
-    if (cl < HDR + ai.ct_len + 16 || memcmp(ct, "SDCS", 4) != 0 || ct[4] != 1)
+    if (cl < HDR || memcmp(ct, "SDCS", 4) != 0 || ct[4] != 1)
         die("%s: not an sdc_seal v1 file", in);
     if (ct[5] != (uint8_t)kem)
-        die("%s: sealed with a different KEM than %s", in, ai.name);
+        die("%s: sealed with %s, but the key is %s", in,
+            sdc_alg_name((sdc_alg)ct[5]) ? sdc_alg_name((sdc_alg)ct[5]) : "an unknown KEM",
+            ai.name);
+    if (cl < HDR + ai.ct_len + 16)
+        die("%s: truncated", in);
 
     uint8_t ss[32], key[32];
     size_t sl = 32, pl = cl - HDR - ai.ct_len - 16;
