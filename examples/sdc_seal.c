@@ -72,6 +72,36 @@ static void seal(const sdc_ctx *ctx, const char *pk_path, const char *in, const 
     free(pk); free(pt); free(buf);
 }
 
+static void open_sealed(const sdc_ctx *ctx, const char *sk_path, const char *in, const char *out)
+{
+    sdc_alg kem;
+    sdc_alg_info ai;
+    size_t skl, cl;
+    uint8_t *sk = read_key(sk_path, &skl, &kem, 1), *ct = read_file(in, &cl);
+    sdc_alg_get_info(kem, &ai);
+    if (cl < HDR + ai.ct_len + 16 || memcmp(ct, "SDCS", 4) != 0 || ct[4] != 1)
+        die("%s: not an sdc_seal v1 file", in);
+    if (ct[5] != (uint8_t)kem)
+        die("%s: sealed with a different KEM than %s", in, ai.name);
+
+    uint8_t ss[32], key[32];
+    size_t sl = 32, pl = cl - HDR - ai.ct_len - 16;
+    uint8_t *pt = xmalloc(pl);
+    must(sdc_kem_decaps(ctx, kem, sk + 1, skl, ct + HDR, ai.ct_len, ss, &sl), "sdc_kem_decaps");
+    aead_key(ctx, ss, sl, key);
+    sdc_status st = sdc_aead_decrypt(ctx, SDC_ALG_AES_256_GCM, key, 32, ZERO_NONCE, 12,
+                                     ct, HDR + ai.ct_len, ct + HDR + ai.ct_len,
+                                     cl - HDR - ai.ct_len, pt, &pl);
+    sdc_memzero(ss, sizeof ss);
+    sdc_memzero(key, sizeof key);
+    if (st == SDC_ERR_AUTH_FAILED)
+        die("%s: wrong key or corrupted file", in);
+    must(st, "sdc_aead_decrypt");
+    write_file(out, pt, pl);
+    sdc_memzero(sk, skl + 1);
+    free(sk); free(ct); free(pt);
+}
+
 int main(int argc, char **argv)
 {
     sdc_ctx *ctx;
@@ -88,6 +118,8 @@ int main(int argc, char **argv)
         keygen(ctx, kem, argv[i], argv[i + 1]);
     else if (strcmp(argv[1], "seal") == 0 && argc - i == 3)
         seal(ctx, argv[i], argv[i + 1], argv[i + 2]);
+    else if (strcmp(argv[1], "open") == 0 && argc - i == 3)
+        open_sealed(ctx, argv[i], argv[i + 1], argv[i + 2]);
     else
         goto usage;
     sdc_ctx_free(ctx);
