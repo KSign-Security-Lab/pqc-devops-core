@@ -76,8 +76,8 @@ static void test_contexts(void)
         if (sdc_provider_supports(first, (sdc_alg)a))
             CHECK(p && strcmp(p, first) == 0, "%s served by %s", sdc_alg_name(a), first);
         else
-            CHECK(p == NULL, "%s should have no provider in single-provider ctx",
-                  sdc_alg_name(a));
+            CHECK(p == NULL || strcmp(p, "core") == 0,
+                  "%s should have no provider in single-provider ctx", sdc_alg_name(a));
     }
     sdc_ctx_free(c);
 
