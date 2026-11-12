@@ -170,6 +170,10 @@ const char *sdc_ctx_provider_for(const sdc_ctx *ctx, sdc_alg alg)
     if (alg == SDC_ALG_X25519_ML_KEM_768)
         return sdc__hybrid_available(ctx) ? "core" : NULL;
     const sdc_provider *p = pick(ctx, alg, NO_OP);
+    if (!p && (alg == SDC_ALG_HKDF_SHA256 || alg == SDC_ALG_HKDF_SHA512)) {
+        sdc_alg mac = alg == SDC_ALG_HKDF_SHA256 ? SDC_ALG_HMAC_SHA256 : SDC_ALG_HMAC_SHA512;
+        return pick(ctx, mac, OP(mac)) ? "core" : NULL;
+    }
     return p ? p->name : NULL;
 }
 
