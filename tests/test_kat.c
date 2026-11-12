@@ -304,7 +304,7 @@ int main(void)
         int ran = 0;
 #define RUN(arr, fn)                                         \
         for (size_t i = 0; i < COUNT(arr); i++)              \
-            if (sdc_provider_supports(prov, arr[i].alg)) {   \
+            if (sdc_ctx_provider_for(ctx, arr[i].alg)) {     \
                 fn(ctx, prov, &arr[i]);                      \
                 ran++;                                       \
             }
