@@ -357,6 +357,47 @@ void sdc_hash_free(sdc_hash_ctx *h)
     free(h);
 }
 
+/* RFC 5869 on top of sdc_mac, used when no provider implements HKDF. */
+static sdc_status hkdf_from_hmac(const sdc_ctx *ctx, sdc_alg alg,
+                                 const uint8_t *ikm, size_t ikm_len,
+                                 const uint8_t *salt, size_t salt_len,
+                                 const uint8_t *info, size_t info_len,
+                                 uint8_t *out, size_t out_len)
+{
+    static const uint8_t zeros[64];
+    sdc_alg mac = alg == SDC_ALG_HKDF_SHA256 ? SDC_ALG_HMAC_SHA256 : SDC_ALG_HMAC_SHA512;
+    size_t hl = alg == SDC_ALG_HKDF_SHA256 ? 32 : 64, n = hl;
+    uint8_t prk[64], t[64 + 1], *buf = NULL;
+    sdc_status st;
+
+    /* extract: PRK = HMAC(salt or zeros, IKM) */
+    st = sdc_mac(ctx, mac, salt_len ? salt : zeros, salt_len ? salt_len : hl,
+                 ikm, ikm_len, prk, &n);
+    /* expand: T(i) = HMAC(PRK, T(i-1) || info || i) */
+    if (st == SDC_OK && !(buf = malloc(hl + info_len + 1)))
+        st = SDC_ERR_NOMEM;
+    size_t done = 0, prev = 0;
+    for (uint8_t i = 1; st == SDC_OK && done < out_len; i++) {
+        memcpy(buf, t, prev);
+        if (info_len)
+            memcpy(buf + prev, info, info_len);
+        buf[prev + info_len] = i;
+        n = hl;
+        st = sdc_mac(ctx, mac, prk, hl, buf, prev + info_len + 1, t, &n);
+        size_t take = out_len - done < hl ? out_len - done : hl;
+        if (st == SDC_OK)
+            memcpy(out + done, t, take);
+        done += take;
+        prev = hl;
+    }
+    if (buf)
+        sdc_memzero(buf, hl + info_len + 1);
+    free(buf);
+    sdc_memzero(prk, sizeof(prk));
+    sdc_memzero(t, sizeof(t));
+    return st;
+}
+
 sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
                     const uint8_t *ikm, size_t ikm_len,
                     const uint8_t *salt, size_t salt_len,
@@ -366,6 +407,12 @@ sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
     const sdc_alg_info *ai;
     const sdc_provider *p;
     sdc_status st = prepare(ctx, alg, SDC_FAMILY_KDF, OP(hkdf), &ai, &p);
+    if (st == SDC_ERR_NO_PROVIDER) {
+        /* No native HKDF (e.g. libgcrypt < 1.10): build it from HMAC. */
+        sdc_alg mac = alg == SDC_ALG_HKDF_SHA256 ? SDC_ALG_HMAC_SHA256 : SDC_ALG_HMAC_SHA512;
+        if (pick(ctx, mac, OP(mac)))
+            st = SDC_OK;
+    }
     if (st != SDC_OK)
         return st;
     CHECK_IN(ikm, ikm_len);
@@ -373,7 +420,9 @@ sdc_status sdc_hkdf(const sdc_ctx *ctx, sdc_alg alg,
     CHECK_IN(info, info_len);
     if (!out || out_len == 0 || out_len > 255 * ai->digest_len)
         return SDC_ERR_INVALID_ARG;
-    st = p->hkdf(alg, ikm, ikm_len, salt, salt_len, info, info_len, out, out_len);
+    st = p ? p->hkdf(alg, ikm, ikm_len, salt, salt_len, info, info_len, out, out_len)
+           : hkdf_from_hmac(ctx, alg, ikm, ikm_len, salt, salt_len, info, info_len,
+                            out, out_len);
     if (st != SDC_OK)
         sdc_memzero(out, out_len);
     return st;
