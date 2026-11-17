@@ -35,6 +35,24 @@ static void keygen(const sdc_ctx *ctx, sdc_alg alg, const char *pk_path, const c
     free(sk);
 }
 
+static void sign_file(const sdc_ctx *ctx, const char *sk_path, const char *file,
+                      const char *sig_path)
+{
+    sdc_alg alg;
+    sdc_alg_info ai;
+    size_t sl, ml;
+    uint8_t *sk = read_tagged(sk_path, &sl, &alg), *msg = read_file(file, &ml);
+    sdc_alg_get_info(alg, &ai);
+    uint8_t *sig = xmalloc(1 + ai.sig_len);
+    size_t gl = ai.sig_len;
+    sig[0] = (uint8_t)alg;
+    must(sdc_sign(ctx, alg, sk + 1, sl, msg, ml, sig + 1, &gl), "sdc_sign");
+    write_file(sig_path, sig, 1 + gl);
+    fprintf(stderr, "signed with %s via %s\n", ai.name, sdc_ctx_provider_for(ctx, alg));
+    sdc_memzero(sk, sl + 1);
+    free(sk); free(msg); free(sig);
+}
+
 int main(int argc, char **argv)
 {
     sdc_ctx *ctx;
@@ -49,6 +67,8 @@ int main(int argc, char **argv)
     must(sdc_ctx_new(&ctx, NULL), "sdc_ctx_new");
     if (strcmp(argv[1], "keygen") == 0 && argc - i == 2)
         keygen(ctx, alg, argv[i], argv[i + 1]);
+    else if (strcmp(argv[1], "sign") == 0 && argc - i == 3)
+        sign_file(ctx, argv[i], argv[i + 1], argv[i + 2]);
     else
         goto usage;
     sdc_ctx_free(ctx);
