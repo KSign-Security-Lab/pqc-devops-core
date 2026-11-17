@@ -53,6 +53,26 @@ static void sign_file(const sdc_ctx *ctx, const char *sk_path, const char *file,
     free(sk); free(msg); free(sig);
 }
 
+static int verify_file(const sdc_ctx *ctx, const char *pk_path, const char *file,
+                       const char *sig_path)
+{
+    sdc_alg alg, salg;
+    size_t pl, ml, gl;
+    uint8_t *pk = read_tagged(pk_path, &pl, &alg), *msg = read_file(file, &ml);
+    uint8_t *sig = read_tagged(sig_path, &gl, &salg);
+    if (alg != salg)
+        die("signature is %s but key is %s", sdc_alg_name(salg), sdc_alg_name(alg));
+    sdc_status st = sdc_verify(ctx, alg, pk + 1, pl, msg, ml, sig + 1, gl);
+    free(pk); free(msg); free(sig);
+    if (st == SDC_ERR_VERIFY_FAILED) {
+        printf("%s: BAD signature\n", file);
+        return 2;
+    }
+    must(st, "sdc_verify");
+    printf("%s: OK (%s)\n", file, sdc_alg_name(alg));
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     sdc_ctx *ctx;
@@ -69,6 +89,8 @@ int main(int argc, char **argv)
         keygen(ctx, alg, argv[i], argv[i + 1]);
     else if (strcmp(argv[1], "sign") == 0 && argc - i == 3)
         sign_file(ctx, argv[i], argv[i + 1], argv[i + 2]);
+    else if (strcmp(argv[1], "verify") == 0 && argc - i == 3)
+        rc = verify_file(ctx, argv[i], argv[i + 1], argv[i + 2]);
     else
         goto usage;
     sdc_ctx_free(ctx);
