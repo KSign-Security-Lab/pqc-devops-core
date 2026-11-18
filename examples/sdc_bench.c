@@ -106,7 +106,7 @@ static void pk_table(void)
         { SDC_ALG_ML_KEM_768,        "encaps", op_encaps },
         { SDC_ALG_ML_KEM_768,        "decaps", op_decaps },
     };
-    printf("\n%-20s", "ops/s");
+    printf("\n%-26s", "ops/s");
     for (size_t p = 0; p < sdc_provider_count(); p++)
         printf(" %10s", sdc_provider_name(p));
     printf("\n");
@@ -115,7 +115,7 @@ static void pk_table(void)
         sdc_alg_get_info(rows[i].alg, &ai);
         char label[40];
         snprintf(label, sizeof label, "%s %s", ai.name, rows[i].what);
-        printf("%-20.20s", label);
+        printf("%-26.26s", label);
         for (size_t p = 0; p < sdc_provider_count(); p++) {
             sdc_ctx *ctx;
             const char *name = sdc_provider_name(p);
@@ -141,14 +141,14 @@ int main(int argc, char **argv)
         budget = atof(argv[1]) > 0 ? atof(argv[1]) : budget;
     static const sdc_alg bulk[] = { SDC_ALG_AES_256_GCM, SDC_ALG_CHACHA20_POLY1305,
                                     SDC_ALG_SHA256, SDC_ALG_SHA3_256 };
-    printf("%-20s", "MiB/s");
+    printf("%-26s", "MiB/s");
     for (size_t p = 0; p < sdc_provider_count(); p++)
         printf(" %10s", sdc_provider_name(p));
     printf("\n");
     for (size_t i = 0; i < sizeof bulk / sizeof bulk[0]; i++) {
         sdc_alg_info ai;
         sdc_alg_get_info(bulk[i], &ai);
-        printf("%-20s", ai.name);
+        printf("%-26s", ai.name);
         for (size_t p = 0; p < sdc_provider_count(); p++) {
             sdc_ctx *ctx;
             const char *name = sdc_provider_name(p);
