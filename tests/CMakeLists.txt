@@ -8,6 +8,9 @@ endforeach()
 
 # Same application code, backend chosen purely by environment.
 if(SDC_BUILD_EXAMPLES)
+  add_test(NAME examples_smoke
+           COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/examples_smoke.sh
+                   ${PROJECT_BINARY_DIR}/examples ${CMAKE_CURRENT_BINARY_DIR}/smoke)
   foreach(p ${SDC_PROVIDERS})
     add_test(NAME example_${p} COMMAND sdc_demo)
     set_tests_properties(example_${p} PROPERTIES ENVIRONMENT "SDC_PROVIDER=${p}")
