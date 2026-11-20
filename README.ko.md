@@ -55,11 +55,16 @@ PQC 전환 과정에서 애플리케이션이 특정 암호 라이브러리에 �
 
 | 알고리즘 | OpenSSL 3 | Nettle | libgcrypt | liboqs |
 |:--|:-:|:-:|:-:|:-:|
-| AES-256-GCM, ChaCha20-Poly1305 | ✓ | ✓ | ✓ | |
-| SHA-256/384/512, SHA3-256/512 | ✓ | ✓ | ✓ | |
-| HKDF-SHA256/512 | ✓ | ✓ | | |
-| Ed25519, ECDSA-P256-SHA256 | ✓ | ✓ | ✓ | |
+| AES-128/256-GCM, ChaCha20-Poly1305 | ✓ | ✓ | ✓ | |
+| SHA-224/256/384/512, SHA3-256/384/512 | ✓ | ✓ | ✓ | |
+| BLAKE2b-512 | ✓ | | ✓ | |
+| HMAC-SHA256/512, PBKDF2-HMAC-SHA256 | ✓ | ✓ | ✓ | |
+| HKDF-SHA256/512 | ✓ | ✓ | HMAC 기반¹ | |
+| Ed25519, ECDSA-P256-SHA256, X25519 | ✓ | ✓ | ✓ | |
 | ML-KEM-512/768/1024, ML-DSA-44/65/87 | | | | ✓ |
+| X25519-ML-KEM-768 (hybrid, experimental) | 코어에서 X25519 + ML-KEM-768 조합¹ | | | |
+
+¹ Provider가 제공하는 알고리즘을 SDK 코어가 조합해 제공하며, `sdc_ctx_provider_for()`는 `"core"`를 반환합니다.
 
 **빌드 및 테스트** (CMake 3.16 이상, OpenSSL 3.0 이상, Nettle/Hogweed + GMP, libgcrypt 개발 패키지 필요. liboqs는 설치되어 있지 않으면 자동으로 내려받습니다):
 
@@ -86,6 +91,8 @@ sdc_status st = sdc_aead_encrypt(ctx, SDC_ALG_AES_256_GCM, key, 32, nonce, 12,
 printf("served by %s\n", sdc_ctx_provider_for(ctx, SDC_ALG_AES_256_GCM));
 sdc_ctx_free(ctx);
 ```
+
+더 보기: [API 개요](./docs/API.md) · [Provider 추가 방법](./docs/ADDING_A_PROVIDER.md) · [예제 프로그램](./examples/README.md) (파일 암호화, 공개키 기반 봉인, 서명, 키 교환, 벤치마크).
 
 재컴파일 없이 백엔드 전환: `SDC_PROVIDER=gcrypt ./build/examples/sdc_demo`. 키와 서명은 Provider와 무관한 표준 인코딩(`sdc.h`에 명시)을 사용하므로 한 Provider로 생성한 키를 다른 Provider에서도 쓸 수 있으며, 교차 Provider 테스트(`tests/test_interop.c`)가 이를 검증합니다.
 
