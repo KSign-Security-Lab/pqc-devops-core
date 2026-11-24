@@ -62,9 +62,8 @@ These are **planned deliverables**. Individual issues remain the source of truth
 | HKDF-SHA256/512 | ✓ | ✓ | via HMAC¹ | |
 | Ed25519, ECDSA-P256-SHA256, X25519 | ✓ | ✓ | ✓ | |
 | ML-KEM-512/768/1024, ML-DSA-44/65/87 | | | | ✓ |
-| X25519-ML-KEM-768 (hybrid, experimental) | composed by the core from X25519 + ML-KEM-768¹ | | | |
 
-¹ Composed by the SDK core from algorithms the providers do offer; `sdc_ctx_provider_for()` reports `"core"`.
+¹ Composed by the SDK core from algorithms the providers do offer; `sdc_ctx_provider_for()` reports `"core"`. The experimental hybrid KEM **X25519-ML-KEM-768** is built the same way from X25519 and ML-KEM-768, so it works with any provider combination that has both.
 
 **Build and test** (needs CMake ≥ 3.16, OpenSSL ≥ 3.0, Nettle/Hogweed + GMP, libgcrypt dev packages; liboqs is fetched automatically unless installed):
 

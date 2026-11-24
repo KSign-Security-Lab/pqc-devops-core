@@ -62,9 +62,8 @@ PQC 전환 과정에서 애플리케이션이 특정 암호 라이브러리에 �
 | HKDF-SHA256/512 | ✓ | ✓ | HMAC 기반¹ | |
 | Ed25519, ECDSA-P256-SHA256, X25519 | ✓ | ✓ | ✓ | |
 | ML-KEM-512/768/1024, ML-DSA-44/65/87 | | | | ✓ |
-| X25519-ML-KEM-768 (hybrid, experimental) | 코어에서 X25519 + ML-KEM-768 조합¹ | | | |
 
-¹ Provider가 제공하는 알고리즘을 SDK 코어가 조합해 제공하며, `sdc_ctx_provider_for()`는 `"core"`를 반환합니다.
+¹ Provider가 제공하는 알고리즘을 SDK 코어가 조합해 제공하며, `sdc_ctx_provider_for()`는 `"core"`를 반환합니다. 실험적 하이브리드 KEM **X25519-ML-KEM-768**도 같은 방식으로 X25519와 ML-KEM-768을 조합하므로, 두 알고리즘을 가진 어떤 Provider 조합에서도 동작합니다.
 
 **빌드 및 테스트** (CMake 3.16 이상, OpenSSL 3.0 이상, Nettle/Hogweed + GMP, libgcrypt 개발 패키지 필요. liboqs는 설치되어 있지 않으면 자동으로 내려받습니다):
 
