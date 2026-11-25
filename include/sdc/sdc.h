@@ -40,7 +40,7 @@ extern "C" {
 #  define SDC_API __attribute__((visibility("default")))
 #endif
 
-#define SDC_VERSION_STRING "0.1.0"
+#define SDC_VERSION_STRING "0.2.0"
 
 /* ------------------------------------------------------------------ status */
 
