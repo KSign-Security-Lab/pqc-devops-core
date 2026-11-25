@@ -7,14 +7,36 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: all providers
+            flags: ""
+          - name: sanitizers
+            flags: "-DSDC_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug"
+          - name: openssl only
+            flags: "-DSDC_WITH_NETTLE=OFF -DSDC_WITH_GCRYPT=OFF -DSDC_WITH_LIBOQS=OFF"
+          - name: nettle only
+            flags: "-DSDC_WITH_OPENSSL=OFF -DSDC_WITH_GCRYPT=OFF -DSDC_WITH_LIBOQS=OFF"
+          - name: gcrypt only
+            flags: "-DSDC_WITH_OPENSSL=OFF -DSDC_WITH_NETTLE=OFF -DSDC_WITH_LIBOQS=OFF"
+          - name: liboqs only
+            flags: "-DSDC_WITH_OPENSSL=OFF -DSDC_WITH_NETTLE=OFF -DSDC_WITH_GCRYPT=OFF"
+    name: ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libssl-dev nettle-dev libgmp-dev libgcrypt20-dev
+      - name: Cache liboqs source
+        uses: actions/cache@v4
+        with:
+          path: build/_deps/liboqs-src
+          key: liboqs-0.12.0
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DSDC_WERROR=ON
+        run: cmake -S . -B build -G Ninja -DSDC_WERROR=ON ${{ matrix.flags }}
       - name: Build
         run: cmake --build build
       - name: Test
