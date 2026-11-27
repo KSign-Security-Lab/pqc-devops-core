@@ -8,8 +8,6 @@
   <a href="./LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-64748b?style=flat-square"></a>
 </p>
 
-> **Note:** This branch is a demo. Commit dates are simulated to illustrate the planned development timeline; the code itself is real and builds and tests as shown.
-
 **The planned implementation layer for DevOps-driven post-quantum cryptography (PQC) transition.** It brings together a Crypto-Agility SDK, legacy-to-SDC API mapping templates, reusable C/Java snippets, and a PIU knowledge base.
 
 > **Project stage:** Initial implementation work is tracked in issues. A first **C prototype of the Crypto-Agility SDK** is available (see [below](#crypto-agility-sdk-c--prototype)); other components are still planned and there are no published packages yet.
