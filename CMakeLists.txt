@@ -28,6 +28,12 @@ if(SDC_SANITIZE)
   add_link_options(-fsanitize=address,undefined)
 endif()
 
+# Keep the header's version string in sync with the project version.
+file(STRINGS include/sdc/sdc.h _sdc_ver REGEX "^#define SDC_VERSION_STRING ")
+if(NOT _sdc_ver MATCHES "\"${PROJECT_VERSION}\"")
+  message(FATAL_ERROR "SDC_VERSION_STRING in sdc.h does not match project version ${PROJECT_VERSION}")
+endif()
+
 add_library(sdc_objs OBJECT
   src/core/sdc.c
   src/core/registry.c
